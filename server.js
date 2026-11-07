@@ -5,7 +5,7 @@
 const http = require('http'), fs = require('fs'), path = require('path');
 const { WebSocketServer } = require('ws');
 globalThis.KF = globalThis.KF || {};
-require('./js/data.js'); require('./js/sim.js');
+require('./data.js'); require('./sim.js');
 const KF = globalThis.KF;
 
 const PORT = process.env.PORT || 3000, MAXP = 6, TICK = 1 / 60;
@@ -17,8 +17,8 @@ const server = http.createServer((req, res) => {
   let u = decodeURIComponent((req.url || '/').split('?')[0]);
   if (u === '/health') { res.writeHead(200); return res.end('ok'); }
   if (u === '/') u = '/index.html';
-  const ok = u === '/index.html' || u === '/style.css' || /^\/js\/[a-z0-9_]+\.js$/.test(u);
-  const file = path.normalize(path.join(ROOT, u));
+   const ok = u === '/index.html' || u === '/style.css' || (/^\/(js\/)?[a-z0-9_]+\.js$/.test(u) && u !== '/server.js');
+  const file = path.normalize(path.join(ROOT, u.replace('/js/', '/')));
   if (!ok || !file.startsWith(ROOT + path.sep)) { res.writeHead(404); return res.end('not found'); }
   fs.readFile(file, (e, d) => {
     if (e) { res.writeHead(404); return res.end('not found'); }
