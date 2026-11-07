@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#120a0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Kung Fu da Ilha</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+  <div id="vignette"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-p">
+      <div class="hud-name"><span id="hName">MESTRE</span><span id="hLives" class="lives">♥♥♥</span></div>
+      <div class="bar hp"><i id="hHp"></i></div>
+      <div class="bar ki" id="hKiBar"><i id="hKi"></i><b>KI · DRAGÃO</b></div>
+    </div>
+    <div class="hud-c"><div id="hScore">0</div><div id="hStage"></div></div>
+    <div class="hud-r"><button id="bMute" aria-label="Som">🔊</button><button id="bPause" aria-label="Pausar">❚❚</button></div>
+    <div id="hTeam"></div>
+    <div id="hCombo"></div>
+    <div id="bossbar" class="hidden"><span>MESTRE JUIZ</span><div class="bar boss"><i id="hBoss"></i></div></div>
+    <div id="banner"></div>
+    <div id="goArrow" class="hidden">VAI ▶</div>
+  </div>
+
+  <!-- Controles de toque -->
+  <div id="touch" class="hidden">
+    <div id="stickZone"></div>
+    <div id="stickBase"><div id="stickKnob"></div></div>
+    <div id="btns">
+      <button class="tb" id="tbC" data-a="jump"><span>跳</span><small>PULO</small></button>
+      <button class="tb" id="tbA" data-a="punch"><span>拳</span><small>ATACAR</small></button>
+      <button class="tb" id="tbB" data-a="kick"><span>蹴</span><small>CHUTE</small></button>
+      <button class="tb" id="tbD" data-a="special"><span>龍</span><small>DRAGÃO</small></button>
+    </div>
+  </div>
+
+  <!-- Telas (título, seleção, história, pausa...) -->
+  <div id="screen" class="hidden"></div>
+
+  <div id="rotate"><div class="phone">📱</div><p>Gire o celular para<br><b>jogar na horizontal</b></p></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/art.js"></script>
+<script src="js/input.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/view.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
