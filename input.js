@@ -36,13 +36,16 @@ function setup(){
   const zone = document.getElementById('stickZone'), base = document.getElementById('stickBase'), knob = document.getElementById('stickKnob');
   if (!zone) return;
   let pid = null, ox = 0, oy = 0; const R = 50;
-  const baseHome = () => { base.style.left = ''; base.style.top = ''; base.style.bottom = ''; knob.style.transform = 'translate(0,0)'; };
+  const baseHome = () => { knob.style.transform = 'translate(0,0)'; };
+  /* joystick FIXO: só responde a toques dentro do círculo da base (não muda de lugar) */
   zone.addEventListener('pointerdown', e => {
-    if (pid !== null) return; pid = e.pointerId; try { zone.setPointerCapture(pid); } catch (er) {}
+    if (pid !== null) return;
+    const r = base.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    if (Math.hypot(e.clientX - cx, e.clientY - cy) > r.width * .62 + 16) return;
+    pid = e.pointerId; try { zone.setPointerCapture(pid); } catch (er) {}
     if (KF.audio) KF.audio.init();
-    const r = zone.getBoundingClientRect(); ox = e.clientX; oy = e.clientY;
-    base.style.left = (ox - r.left - 62) + 'px'; base.style.top = (oy - r.top - 62) + 'px'; base.style.bottom = 'auto';
-    base.classList.add('on'); e.preventDefault();
+    ox = cx; oy = cy; base.classList.add('on'); e.preventDefault();
+    zone.dispatchEvent(new PointerEvent('pointermove', {pointerId: pid, clientX: e.clientX, clientY: e.clientY}));
   });
   zone.addEventListener('pointermove', e => {
     if (e.pointerId !== pid) return;

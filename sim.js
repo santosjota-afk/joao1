@@ -30,8 +30,8 @@ KF.createGame = function(){
       pref: Math.random() < .55, boss: !!K.boss, armor: !!K.armor, entered: false, wy: rand(-20, 20), wyT: 0, rep: 0, mt: 0};
     G.ents.push(f); return f;
   }
-  G.addPlayer = function(pid, name, idx, sc, lk){
-    const p = mk('player', G.club, 'good', 60 + (idx || 0) * 10, 196 + ((idx || 0) % 4) * 17);
+  G.addPlayer = function(pid, name, idx, sc, lk, club){
+    const p = mk('player', KF.CLUBS[club] && club !== 'ref' ? club : G.club, 'good', 60 + (idx || 0) * 10, 196 + ((idx || 0) % 4) * 17);
     const SC = KF.SCHOOLS[Math.max(0, KF.SCHOOL_IDS.indexOf(sc))]; p.sc = SC; p.scI = KF.SCHOOLS.indexOf(SC);
     p.hp = p.max = SC.hp; p.spd = SC.spd;
     p.pid = pid; p.isPlayer = true; p.name = name || 'Mestre'; p.lives = 3; p.ki = 20; p.pts = 0; p.combo = 0; p.comboT = 0; p.out = false;
@@ -52,7 +52,7 @@ KF.createGame = function(){
     G.score = o.carry ? o.carry.score : 0; G.kos = 0; G.maxCombo = 0; G.hitstop = 0; G.shake = 0; G.startScore = G.score; G.hitsTaken = 0;
     const pls = o.players && o.players.length ? o.players : [{pid: 1, name: 'Você'}];
     G.nP = pls.length;
-    pls.forEach((pl, i) => { const p = G.addPlayer(pl.pid, pl.name, i, pl.sc, pl.lk); if (o.carry && o.carry.ki != null && !G.mp) p.ki = o.carry.ki; });
+    pls.forEach((pl, i) => { const p = G.addPlayer(pl.pid, pl.name, i, pl.sc, pl.lk, pl.club); if (o.carry && o.carry.ki != null && !G.mp) p.ki = o.carry.ki; });
     G.player = G.players[0];
     const nAllies = G.mp ? (st.truce ? 2 : 0) : st.allies;
     for (let i = 0; i < nAllies; i++) {
@@ -71,6 +71,10 @@ KF.createGame = function(){
   const livePlayers = () => G.players.filter(p => !p.out);
 
   /* ---------- ataques ---------- */
+  const fxCol = f => f.isPlayer && f.sc ? f.sc.col : ((KF.CLUBS[f.club] || {}).glow || '#fff');
+  function slashFx(f, a){
+    E('slash', Math.round(f.x), Math.round(f.y - f.z), f.face, f.atkKey || '', fxCol(f), f.isPlayer && f.sc ? KF.SCHOOLS.indexOf(f.sc) : -1, f.isPlayer ? 1 : 0, a.rng | 0);
+  }
   function startAtk(f, key){
     const a = KF.ATK[key];
     f.atk = a; f.atkKey = key; f.st = 'atk'; f.t = 0; f.didHit = false; f.hitSet = new Set(); f.queue = false; f.n++; f.mt = 0;
@@ -81,7 +85,11 @@ KF.createGame = function(){
     if (a.sfx === 'special' || a.sfx === 'whistle') E('sfx', a.sfx);
     else if (a.pose !== 'throw') E('sfx', 'whoosh');
     if (f.isPlayer && (key === 'kick' || key === 'p3')) E('sfx', 'kiai');
-    if (f.isPlayer && key === 'spin') E('ring', f.x, f.y, f.sc ? f.sc.col : KF.CLUBS[f.club].glow, 130, .5);
+    if (f.isPlayer && key === 'spin') {
+      E('ring', f.x, f.y, f.sc ? f.sc.col : KF.CLUBS[f.club].glow, 130, .5);
+      E('special', Math.round(f.x), Math.round(f.y - f.z), f.sc ? KF.SCHOOLS.indexOf(f.sc) : 0);
+      popText(f.x, f.y - f.z - 92, f.sc.spMark, f.sc.col, 34); E('shake', 3);
+    }
   }
   function schoolMul(f, key){
     const S = f.sc; if (!S) return 1;
@@ -134,6 +142,7 @@ KF.createGame = function(){
     const kill = t.hp <= 0, heavy = kill || att.down;
     const cy = t.y - t.z - 28 * t.scale;
     spark(t.x - dir * 3, cy, heavy);
+    E('burst', Math.round(t.x - dir * 3), Math.round(cy), dir, heavy ? 1 : 0, fxCol(src));
     E('sfx', heavy ? 'heavy' : 'hit');
     G.hitstop = Math.max(G.hitstop, kill && t.boss ? .35 : heavy ? .085 : .05);
     E('shake', heavy ? 5 : 2.2);
@@ -153,7 +162,7 @@ KF.createGame = function(){
         G.kos++; const sc = t.K.score || 100; G.score += sc; if (cr) cr.pts += sc;
         popText(t.x, cy - 26, t.boss ? 'GOOOOL!' : pick(['GOL!', 'GOL!', 'GOLAÇO!']), '#ffd23a', t.boss ? 20 : 15);
         if (!t.boss && Math.random() < .15) G.items.push({type: 'pastel', x: t.x, y: t.y});
-        if (t.boss) { E('sfx', 'roar'); E('sfx', 'gong'); }
+        if (t.boss) { E('sfx', 'roar'); E('sfx', 'gong'); E('flash', '#fff6d0', .55); }
       }
       return true;
     }
@@ -272,7 +281,7 @@ KF.createGame = function(){
       if (!f.didHit) {
         f.didHit = true;
         if (a.proj) spawnProj(f, a.proj);
-        else { strike(f, a); if (a.shock) { E('ring', f.x, f.y, '#ffe14d', 190, .45); E('shake', 4); } }
+        else { slashFx(f, a); strike(f, a); if (a.shock) { E('ring', f.x, f.y, '#ffe14d', 190, .45); E('shake', 4); } }
         f.mt = a.multi || 0;
       } else if (a.multi && k < a.su + a.ac) {
         f.mt -= dt; if (f.mt <= 0) { f.mt = a.multi; f.hitSet = new Set(); strike(f, a); }

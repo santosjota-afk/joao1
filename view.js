@@ -6,12 +6,12 @@ const art = KF.art;
 const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-const V = KF.view = {fx: [], shake: 0, bg: {}, demo: null};
+const V = KF.view = {fx: [], shake: 0, bg: {}, demo: null, ghosts: [], gt: {}, flashA: 0, flashC: '#fff'};
 
 V.stage = theme => V.bg[theme] || (V.bg[theme] = art.makeStage(theme));
 V.lookOf = f => f.look || (f.look = {skin: KF.SKINS[f.lk[0]], hair: KF.HAIRS[f.lk[1]], style: KF.STYLES[f.lk[2]]});
 
-function fxAdd(o){ if (V.fx.length < 170) V.fx.push(o); }
+function fxAdd(o){ if (V.fx.length < 260) V.fx.push(o); }
 /* eventos vindos da simulação (solo) ou do servidor (online) */
 V.event = function(ev){
   const k = ev[0];
@@ -20,22 +20,83 @@ V.event = function(ev){
   else if (k === 'text') fxAdd({type: 'text', x: ev[1], y: ev[2], vy: -26, life: .9, max: .9, txt: ev[3], col: ev[4], size: ev[5]});
   else if (k === 'ring') fxAdd({type: 'ring', x: ev[1], y: ev[2], r: 8, col: ev[3], grow: ev[4], max: ev[5], life: ev[5]});
   else if (k === 'shake') V.shake = Math.max(V.shake, ev[1]);
+  else if (k === 'slash') fxAdd({type: 'slash', x: ev[1], y: ev[2], face: ev[3], key: ev[4], col: ev[5], sc: ev[6], pl: ev[7], rng: ev[8] || 34, life: ev[4] === 'kick' || ev[4] === 'p3' ? .26 : .2, max: ev[4] === 'kick' || ev[4] === 'p3' ? .26 : .2});
+  else if (k === 'burst') {
+    const n = ev[4] ? 9 : 5, cols = ['#ffffff', '#fff3a0', ev[5] || '#ffd23a'];
+    for (let i = 0; i < n; i++) { const a = (Math.random() - .5) * 2.2, sp = rand(70, ev[4] ? 190 : 140); fxAdd({type: 'bp', x: ev[1], y: ev[2], vx: Math.cos(a) * ev[3] * sp, vy: Math.sin(a) * sp - 30, life: rand(.28, .5), max: .5, col: cols[i % 3], len: rand(3, 7)}); }
+  }
+  else if (k === 'special') {
+    const sc = ev[3] | 0, col = (KF.SCHOOLS[sc] || {}).col || '#fff';
+    fxAdd({type: 'sp' + sc, x: ev[1], y: ev[2], col, life: sc === 1 ? .7 : .6, max: sc === 1 ? .7 : .6});
+    V.flashA = Math.max(V.flashA, .22); V.flashC = col;
+    for (let i = 0; i < 14; i++) { const a = rand(0, 6.28), sp = rand(40, 150); fxAdd({type: 'bp', x: ev[1], y: ev[2] - 10, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .6 - 30, life: rand(.3, .6), max: .6, col: i % 2 ? col : '#fff', len: rand(3, 6)}); }
+  }
+  else if (k === 'flash') { V.flashC = ev[1] || '#fff'; V.flashA = Math.max(V.flashA, ev[2] || .4); }
 };
 V.update = function(dt){
-  V.shake = Math.max(0, V.shake - 22 * dt);
+  V.shake = Math.max(0, V.shake - 22 * dt); V.flashA = Math.max(0, V.flashA - 1.6 * dt);
+  for (const gh of V.ghosts) gh.life -= dt; V.ghosts = V.ghosts.filter(gh => gh.life > 0);
   for (const f of V.fx) {
     f.life -= dt;
     if (f.type === 'dust') { f.x += f.vx * dt; f.y += f.vy * dt; }
     else if (f.type === 'text') { f.y += f.vy * dt; f.vy *= .94; }
     else if (f.type === 'ring') f.r += f.grow * dt;
+    else if (f.type === 'bp') { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 320 * dt; f.vx *= .985; }
   }
   V.fx = V.fx.filter(f => f.life > 0);
 };
-V.clearFx = () => { V.fx = []; V.shake = 0; };
+V.clearFx = () => { V.fx = []; V.shake = 0; V.ghosts = []; V.gt = {}; V.flashA = 0; };
+
+function arcPath(g, cx, cy, r, a0, a1){ g.beginPath(); g.arc(cx, cy, r, a0, a1); }
+function drawSlash(g, f, x, a){
+  const p = 1 - a, face = f.face || 1, R = clamp(f.rng, 22, 60), k = f.key, big = f.pl ? 1 : .7;
+  g.save(); g.translate(x, f.y); g.scale(face, 1); g.lineCap = 'round';
+  const sw = Math.min(1, p * 3.2);
+  if (k === 'kick' || k === 'p3') {           // meia-lua larga
+    const cx = 2, cy = -14, a0 = -1.25, a1 = a0 + 2.0 * sw;
+    for (const [w, al, col] of [[8 * big, .35, f.col], [4 * big, .85, f.col], [1.8, 1, '#ffffff']]) { g.globalAlpha = al * a; g.strokeStyle = col; g.lineWidth = w * (1 - p * .6); arcPath(g, cx, cy, R * .9, a0, a1); g.stroke(); }
+  } else if (k === 'jkick') {                  // voadora: traço diagonal
+    g.globalAlpha = a; for (const [w, col] of [[7 * big, f.col], [2.2, '#fff']]) { g.strokeStyle = col; g.lineWidth = w * (1 - p * .5); g.beginPath(); g.moveTo(-8, -40 + p * 4); g.lineTo(R * .9 * sw, -4); g.stroke(); }
+  } else if (k === 'p1' || k === 'p2') {       // soco: riscos de velocidade
+    g.globalAlpha = a; for (let i = 0; i < 3; i++) { const yy = -30 + i * 6 - (k === 'p2' ? 2 : 0), len = R * (.55 + .2 * (i === 1)) * sw; g.strokeStyle = i === 1 ? '#fff' : f.col; g.lineWidth = (i === 1 ? 2.4 : 3.4) * (1 - p * .5); g.beginPath(); g.moveTo(8 + i * 3, yy); g.lineTo(8 + i * 3 + len, yy - 1); g.stroke(); }
+  } else {                                      // inimigos / outros golpes
+    const a0 = -1.1, a1 = a0 + 1.7 * sw; g.globalAlpha = a * .8; g.strokeStyle = f.col; g.lineWidth = 4 * (1 - p * .6); arcPath(g, 0, -16, R * .8, a0, a1); g.stroke();
+  }
+  g.restore();
+}
+function drawSpecial(g, f, x, a){
+  const p = 1 - a, sc = +f.type.slice(2); g.save(); g.translate(x, f.y);
+  if (sc === 0) {          // DRAGÃO: espiral dupla de fogo
+    for (let j = 0; j < 2; j++) {
+      g.beginPath(); for (let i = 0; i <= 36; i++) { const t = i / 36, an = t * 9.4 + j * 3.14 + p * 8, r = (10 + p * 70) * (.25 + t * .75); const px = Math.cos(an) * r, py = Math.sin(an) * r * .32 - t * 26 * (1 - p * .4) + 6; i ? g.lineTo(px, py) : g.moveTo(px, py); }
+      g.strokeStyle = j ? '#ffd23a' : '#ff5a1a'; g.lineWidth = 5 * a + 1; g.globalAlpha = Math.min(1, a * 1.6); g.lineCap = 'round'; g.stroke();
+    }
+    g.globalAlpha = a * .6; g.fillStyle = '#ff7a2a'; g.beginPath(); g.ellipse(0, 6, 22 + p * 40, 7 + p * 10, 0, 0, 6.3); g.fill();
+  } else if (sc === 1) {   // KIAI: ondas brancas + raios
+    for (let i = 0; i < 3; i++) { const q = clamp(p * 1.6 - i * .22, 0, 1); if (q <= 0) continue; g.globalAlpha = (1 - q) * .9; g.strokeStyle = i ? '#cfe8ff' : '#ffffff'; g.lineWidth = 4 * (1 - q) + 1; g.beginPath(); g.ellipse(0, -14, 14 + q * 100, 8 + q * 56, 0, 0, 6.3); g.stroke(); }
+    g.strokeStyle = '#fff'; g.lineCap = 'round'; g.globalAlpha = a * .8; for (let i = 0; i < 16; i++) { const an = i * .3927, r0 = 18 + p * 50, r1 = r0 + 24 * a + 6; g.lineWidth = 2; g.beginPath(); g.moveTo(Math.cos(an) * r0, -14 + Math.sin(an) * r0 * .6); g.lineTo(Math.cos(an) * r1, -14 + Math.sin(an) * r1 * .6); g.stroke(); }
+  } else if (sc === 2) {   // ELEFANTE: pisada, rachaduras e poeira dourada
+    g.globalAlpha = Math.min(1, a * 1.5); g.strokeStyle = '#2a1a10'; g.lineWidth = 2.4; g.lineCap = 'round';
+    for (let i = 0; i < 9; i++) { const an = i * .7 + .3, r = 14 + p * 78; g.beginPath(); g.moveTo(Math.cos(an) * 10, 4 + Math.sin(an) * 3); g.lineTo(Math.cos(an) * r * .6 + Math.cos(an + .5) * 6, 4 + Math.sin(an) * r * .2); g.lineTo(Math.cos(an) * r, 4 + Math.sin(an) * r * .3); g.stroke(); }
+    g.strokeStyle = '#f2c200'; g.lineWidth = 5 * a + 1; g.beginPath(); g.ellipse(0, 4, 20 + p * 100, 6 + p * 24, 0, 0, 6.3); g.stroke();
+    g.globalAlpha = a * .5; g.fillStyle = '#e8c97a'; g.beginPath(); g.ellipse(0, 2, 30 + p * 60, 8 + p * 10, 0, 0, 6.3); g.fill();
+  } else {                 // TIGRE: garras cruzadas
+    g.lineCap = 'round'; const sw = Math.min(1, p * 3);
+    for (const side of [-1, 1]) for (let i = -1; i <= 1; i++) {
+      const ox = side * 8 + i * 10, len = 70 * sw; g.globalAlpha = a; g.strokeStyle = i === 0 ? '#ffffff' : '#7fc0ff'; g.lineWidth = (i === 0 ? 3.4 : 2.6) * (.5 + a);
+      g.beginPath(); g.moveTo(ox - side * 28, -56 + i * 4); g.lineTo(ox - side * 28 + side * len * .45, -56 + i * 4 + len * .8); g.stroke();
+    }
+    g.globalAlpha = a * .55; g.strokeStyle = '#4aa8ff'; g.lineWidth = 3; g.beginPath(); g.ellipse(0, -10, 20 + p * 90, 8 + p * 30, 0, 0, 6.3); g.stroke();
+  }
+  g.restore();
+}
 
 function drawFx(g, cam){
   for (const f of V.fx) {
     const a = clamp(f.life / f.max, 0, 1), x = f.x - cam;
+    if (f.type === 'slash') { drawSlash(g, f, x, a); continue; }
+    if (f.type && f.type.charCodeAt(0) === 115 && f.type.charCodeAt(1) === 112 && f.type.length === 3) { drawSpecial(g, f, x, a); continue; }
+    if (f.type === 'bp') { g.strokeStyle = f.col; g.lineWidth = 2; g.lineCap = 'round'; g.globalAlpha = Math.min(1, a * 2); g.beginPath(); g.moveTo(x, f.y); g.lineTo(x - f.vx * .02 * (f.len / 4), f.y - f.vy * .02 * (f.len / 4)); g.stroke(); g.globalAlpha = 1; continue; }
     if (f.type === 'spark') {
       const r = (1 - a) * 16 * f.big + 4; g.save(); g.translate(x, f.y); g.strokeStyle = '#fff3a0'; g.lineWidth = 2.2; g.lineCap = 'round';
       for (let i = 0; i < 8; i++) { const an = i * Math.PI / 4 + .3; g.beginPath(); g.moveTo(Math.cos(an) * r * .45, Math.sin(an) * r * .45); g.lineTo(Math.cos(an) * r, Math.sin(an) * r); g.stroke(); }
@@ -56,6 +117,13 @@ V.render = function(g, S, dt){
   if (V.shake > .3) g.translate(rand(-V.shake, V.shake) * .6, rand(-V.shake, V.shake) * .6);
   V.stage(S.theme).draw(g, cam, VW, T, dt);
   const L = [];
+  for (const f of S.ents) {            // imagens residuais em golpes rápidos
+    if (dt > 0 && !f.dead) {
+      const ak = f.ak || f.atkKey, fast = (f.st === 'atk' && f.atk && (f.atk.air || f.atk.dashV || f.atk.lunge || ak === 'spin' || ak === 'kick')) || (f.pid > 0 && f.st === 'jump');
+      if (fast) { V.gt[f.id] = (V.gt[f.id] || 0) - dt; if (V.gt[f.id] <= 0) { V.gt[f.id] = .04; if (V.ghosts.length < 46) { const c = Object.assign({}, f); V.ghosts.push({f: c, life: .22, max: .22}); } } }
+    }
+  }
+  for (const gh of V.ghosts) L.push({y: gh.f.y - .5, gh});
   for (const f of S.ents) L.push({y: f.y, f});
   for (const p of S.proj) L.push({y: p.y, p});
   for (const i of S.items) L.push({y: i.y, i});
@@ -65,6 +133,7 @@ V.render = function(g, S, dt){
   }
   L.sort((a, b) => a.y - b.y);
   for (const o of L) {
+    if (o.gh) { const c = o.gh.f; V.lookOf(c); g.globalAlpha = .38 * o.gh.life / o.gh.max; art.drawFighter(g, c, c.x - cam, c.y - c.z, T); g.globalAlpha = 1; continue; }
     if (o.f) {
       const f = o.f, sx = f.x - cam, sy = f.y - f.z; V.lookOf(f);
       if (f.dead && f.fade > 0) g.globalAlpha = Math.abs(Math.sin(f.fade * 30)) * (1 - f.fade / .85);
@@ -91,6 +160,7 @@ V.render = function(g, S, dt){
   }
   drawFx(g, cam);
   g.restore();
+  if (V.flashA > .01) { g.save(); g.globalAlpha = Math.min(.5, V.flashA); g.fillStyle = V.flashC; g.fillRect(0, 0, VW, 270); g.restore(); }
   if (S.curtain > 1) {       // laterais escuras: a área jogável online tem largura fixa
     const w = S.curtain, gl = g.createLinearGradient(0, 0, w, 0); gl.addColorStop(0, 'rgba(8,3,4,.96)'); gl.addColorStop(.8, 'rgba(8,3,4,.9)'); gl.addColorStop(1, 'rgba(8,3,4,0)');
     g.fillStyle = gl; g.fillRect(0, 0, w, 270);

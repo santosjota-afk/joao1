@@ -50,7 +50,7 @@ button{font-family:inherit;color:inherit;cursor:pointer;touch-action:manipulatio
 
 /* ---------- toque ---------- */
 #touch{position:absolute;inset:0;pointer-events:none}
-#stickZone{position:absolute;left:0;top:22%;bottom:0;width:46%;pointer-events:auto;touch-action:none}
+#stickZone{position:absolute;left:0;bottom:0;width:calc(var(--sa-l) + 200px);height:calc(var(--sa-b) + 190px);pointer-events:auto;touch-action:none}
 #stickBase{position:absolute;width:112px;height:112px;border-radius:50%;border:3px solid rgba(255,255,255,.32);background:rgba(255,255,255,.07);
   left:calc(var(--sa-l) + 26px);bottom:calc(var(--sa-b) + 22px);pointer-events:none;transition:opacity .15s;opacity:.8}
 #stickBase.on{opacity:1;border-color:rgba(255,220,120,.8);background:rgba(255,255,255,.12)}
@@ -66,7 +66,7 @@ button{font-family:inherit;color:inherit;cursor:pointer;touch-action:manipulatio
 #tbB{right:calc(var(--sa-r) + var(--b)*1.5 + 28px);bottom:calc(var(--sa-b) + 14px)}
 #tbC{right:calc(var(--sa-r) + var(--b)*.25 + 14px);bottom:calc(var(--sa-b) + var(--b)*1.5 + 26px);background:radial-gradient(circle at 35% 30%,rgba(120,190,255,.75),rgba(20,60,150,.8))}
 #tbD{right:calc(var(--sa-r) + var(--b)*1.5 + 36px);bottom:calc(var(--sa-b) + var(--b) + 30px);background:radial-gradient(circle at 35% 30%,rgba(255,225,120,.85),rgba(190,110,10,.85))}
-#stickBase{width:124px;height:124px}
+#stickBase{width:124px;height:124px;opacity:.95}
 #stickBase::before{content:"";position:absolute;inset:0;border-radius:50%;background:
  linear-gradient(#fff6,#fff6) 50% 8px/3px 14px no-repeat,linear-gradient(#fff6,#fff6) 50% calc(100% - 8px)/3px 14px no-repeat,
  linear-gradient(#fff6,#fff6) 8px 50%/14px 3px no-repeat,linear-gradient(#fff6,#fff6) calc(100% - 8px) 50%/14px 3px no-repeat}
@@ -193,3 +193,4 @@ button.cname{border-color:var(--gold)}
 .slot .sk{opacity:.7;font-size:9px}
 @media (max-width:560px){.sel{grid-template-columns:1fr}}
 .selcard>.row{position:sticky;bottom:-12px;z-index:3;margin-top:8px;padding:6px 0 4px;background:linear-gradient(transparent,#120809 30%)}
+.slot .sw{display:inline-block;width:10px;height:10px;border-radius:3px;border:1px solid #fff;margin-right:3px;vertical-align:-1px}
