@@ -84,11 +84,12 @@ function fighterScreen(o){
   selOpts = o; const keep = scr.querySelector('.card'), top = keep ? keep.scrollTop : 0;
   if (!KF.CLUBS[sel.club] || sel.club === 'ref') sel.club = 'fig';
   if (o.ban && sel.club === o.ban) sel.club = KF.CLUB_LIST.map(c => c.id).find(id => id !== o.ban);
-  const rv = KF.CLUBS[sel.club].rivals; if (!rv.includes(sel.rival)) sel.rival = rv[0];
+  const ALL = KF.CLUB_LIST.map(c => c.id), RIV = ALL.filter(id => id !== sel.club);
+  if (!KF.CLUBS[sel.rival] || sel.rival === 'ref' || sel.rival === sel.club) sel.rival = KF.CLUBS[sel.club].rivals.find(id => id !== sel.club) || RIV[0];
   const S = schoolOf(sel.school);
   let team = '';
   if (o.team) team = '<div class="lab">SEU TIME</div><div class="cyc"><button class="btn sm alt" data-act="selclub" data-d="-1">◀</button><button class="cname" data-act="clubgrid"><i style="background:' + swatch(sel.club) + '"></i>' + esc(KF.CLUBS[sel.club].name) + '</button><button class="btn sm alt" data-act="selclub" data-d="1">▶</button></div>' + (o.noRival ? '' :
-    '<div class="lab">RIVAL</div>') + (o.noRival ? '' : rv.length > 1 ? '<div class="cyc"><button class="btn sm alt" data-act="selrival" data-d="-1">◀</button><span class="cname"><i style="background:' + swatch(sel.rival) + '"></i>' + esc(KF.CLUBS[sel.rival].name) + '</span><button class="btn sm alt" data-act="selrival" data-d="1">▶</button></div>' : '<div class="cyc"><span class="cname"><i style="background:' + swatch(sel.rival) + '"></i>' + esc(KF.CLUBS[sel.rival].name) + '</span></div>');
+    '<div class="lab">RIVAL</div>') + (o.noRival ? '' : '<div class="cyc"><button class="btn sm alt" data-act="selrival" data-d="-1">◀</button><button class="cname" data-act="rivalgrid"><i style="background:' + swatch(sel.rival) + '"></i>' + esc(KF.CLUBS[sel.rival].name) + '</button><button class="btn sm alt" data-act="selrival" data-d="1">▶</button></div>');
   else team = '<p class="hint" style="animation:none">O time é o da sala.</p>';
   const dots = (arr, key, cur) => '<div class="dots">' + arr.map((c, i) => '<button class="dot' + (i === cur ? ' on' : '') + '" data-act="' + key + '" data-i="' + i + '" style="background:' + c + '" aria-label="opção ' + (i + 1) + '"></button>').join('') + '</div>';
   const cards = KF.SCHOOLS.map(x => '<button class="scard' + (x.id === S.id ? ' on' : '') + '" data-act="selschool" data-id="' + x.id + '" style="--c:' + x.col + '"><span class="mk">' + x.mark + '</span><b>' + x.name + '</b><small>' + x.land + '</small></button>').join('');
@@ -101,7 +102,7 @@ function fighterScreen(o){
     '<div class="stys">' + STY_NAMES.map((n, i) => '<button class="sty' + (i === sel.lk[2] ? ' on' : '') + '" data-act="selsty" data-i="' + i + '">' + n + '</button>').join('') + '</div></div></div></div>' +
     '<div class="row"><button class="btn alt" data-act="' + o.back + '">◀ VOLTAR</button><button class="btn big" data-act="selok">✔ CONFIRMAR</button></div></div>', 'solid');
   const nc = scr.querySelector('.card'); if (nc) nc.scrollTop = top;
-  if (o.team) au.music('club_' + sel.club);
+  if (o.team) au.anthem(sel.club);
   pvStart();
 }
 function pvStart(){
@@ -243,9 +244,10 @@ N.onclose = () => {
 /* ---------- ações dos botões ---------- */
 const ACTIONS = {
   play(){ fighterScreen({team: true, back: 'title', ok(){ commitSel(); if (save.cleared > 0) stageSelect(); else storyScreen(0); }}); },
-  selclub(el){ const L = KF.CLUB_LIST.map(c => c.id).filter(id => !selOpts.ban || id !== selOpts.ban), i = L.indexOf(sel.club); sel.club = L[cyc(i, L.length, +el.dataset.d)]; sel.rival = KF.CLUBS[sel.club].rivals[0]; fighterScreen(selOpts); },
-  selrival(el){ const r = KF.CLUBS[sel.club].rivals, i = r.indexOf(sel.rival); sel.rival = r[cyc(i, r.length, +el.dataset.d)]; fighterScreen(selOpts); },
-  clubgrid(){ const o = selOpts; pickScreen('ESCOLHA O TIME', KF.CLUB_LIST.map(c => c.id).filter(id => !o.ban || id !== o.ban), 'selback', id => { sel.club = id; sel.rival = KF.CLUBS[id].rivals[0]; fighterScreen(o); }); },
+  selclub(el){ const L = KF.CLUB_LIST.map(c => c.id).filter(id => !selOpts.ban || id !== selOpts.ban), i = L.indexOf(sel.club); sel.club = L[cyc(i, L.length, +el.dataset.d)]; fighterScreen(selOpts); },
+  selrival(el){ const r = KF.CLUB_LIST.map(c => c.id).filter(id => id !== sel.club), i = r.indexOf(sel.rival); sel.rival = r[cyc(i, r.length, +el.dataset.d)]; fighterScreen(selOpts); },
+  clubgrid(){ const o = selOpts; pickScreen('ESCOLHA O TIME', KF.CLUB_LIST.map(c => c.id).filter(id => !o.ban || id !== o.ban), 'selback', id => { sel.club = id; fighterScreen(o); }); },
+  rivalgrid(){ const o = selOpts; pickScreen('ESCOLHA O RIVAL', KF.CLUB_LIST.map(c => c.id).filter(id => id !== sel.club), 'selback', id => { sel.rival = id; fighterScreen(o); }); },
   selback(){ fighterScreen(selOpts); },
   selschool(el){ sel.school = el.dataset.id; fighterScreen(selOpts); },
   selskin(el){ sel.lk[0] = +el.dataset.i; fighterScreen(selOpts); },
@@ -328,6 +330,8 @@ function hud(S, pl, score){
   const bb = $('bossbar'), bv = boss ? Math.round(boss.hp / boss.max * 100) : -1;
   if (lastHud.boss !== bv) { lastHud.boss = bv; bb.classList.toggle('hidden', !boss); if (boss) $('hBoss').style.width = bv + '%'; }
   if (S.online) {
+    if (!$('hPing')) { const d = document.createElement('div'); d.id = 'hPing'; $('hud').appendChild(d); }
+    if (N.ping !== lastHud.pg) { lastHud.pg = N.ping; const pe = $('hPing'); pe.textContent = N.ping + ' ms'; pe.style.color = N.ping < 90 ? '#8ff58f' : N.ping < 170 ? '#ffd23a' : '#ff6a4a'; }
     const mm = S.ents.find(e => e.pid === S.me); if (mm && lastHud.cl !== mm.club) { lastHud.cl = mm.club; setT('hName', KF.CLUBS[mm.club].name.toUpperCase()); }
     const h = pl.filter(p => p.pid !== S.me).map(p => '<div class="tm' + (p.out ? ' out' : '') + '"><span>' + esc(p.name) + '</span><div class="bar"><i style="width:' + Math.round(p.hp / p.max * 100) + '%"></i></div></div>').join('');
     if (lastHud.team !== h) { lastHud.team = h; $('hTeam').innerHTML = h; }

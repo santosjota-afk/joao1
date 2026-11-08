@@ -4,7 +4,7 @@
 (function(){
 const KF = window.KF = window.KF || {};
 let ctx = null, master, musicG, sfxG, rev, revG, noiseBuf, trk = null;
-let muted = false;
+let muted = false, anth = null, anthT = 0;
 try { muted = localStorage.getItem('kfi_mute') === '1'; } catch (e) {}
 
 const SC = {hira: [0, 2, 3, 7, 8], insen: [0, 1, 5, 7, 10], yo: [0, 2, 4, 7, 9], thai: [0, 2, 4, 7, 9]};
@@ -226,11 +226,33 @@ const A = KF.audio = {
     A.curName = name;
   },
   stopMusic(fade){
+    A.stopAnthem(fade);
     clearInterval(timer); timer = null; cur = null; A.curName = null; pending = null;
     if (ctx && trk) {
       const old = trk; trk = null;
       try { old.gain.setTargetAtTime(0, ctx.currentTime, (fade || 0.3) / 3); setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 2500); } catch (e) {}
     }
+  },
+  /* hino do clube (arquivo mp3); sem arquivo, cai no tema gerado */
+  anthem(id){
+    clearTimeout(anthT);
+    anthT = setTimeout(() => {
+      if (!ctx) return;
+      if (!(KF.ANTHEMS && KF.ANTHEMS[id])) { A.music('club_' + id); return; }
+      if (anth && anth.id === id) return;
+      A.stopMusic(0.25);
+      const a = new Audio('hinos/' + id + '.mp3'); a.loop = true; a.preload = 'auto';
+      let src, g; try { src = ctx.createMediaElementSource(a); g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(musicG); } catch (e) { A.music('club_' + id); return; }
+      const o = anth = {id, a, g, src};
+      a.addEventListener('error', () => { if (anth === o) { A.stopAnthem(0.1); A.music('club_' + id); } });
+      const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
+      g.gain.setTargetAtTime(1.2, ctx.currentTime, 0.25);
+    }, 200);
+  },
+  stopAnthem(fade){
+    clearTimeout(anthT); const o = anth; if (!o) return; anth = null;
+    try { o.g.gain.setTargetAtTime(0, ctx.currentTime, (fade || 0.25) / 3); } catch (e) {}
+    setTimeout(() => { try { o.a.pause(); o.a.removeAttribute('src'); o.a.load(); o.src.disconnect(); o.g.disconnect(); } catch (e) {} }, 900);
   },
   jingle(kind){        // vitória / derrota
     if (!ctx) return;

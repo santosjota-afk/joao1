@@ -194,3 +194,13 @@ button.cname{border-color:var(--gold)}
 @media (max-width:560px){.sel{grid-template-columns:1fr}}
 .selcard>.row{position:sticky;bottom:-12px;z-index:3;margin-top:8px;padding:6px 0 4px;background:linear-gradient(transparent,#120809 30%)}
 .slot .sw{display:inline-block;width:10px;height:10px;border-radius:3px;border:1px solid #fff;margin-right:3px;vertical-align:-1px}
+#hPing{position:absolute;top:calc(var(--sa-t,0px) + 52px);right:calc(var(--sa-r) + 10px);font:900 10px var(--disp);text-shadow:0 1px 2px #000;opacity:.85;pointer-events:none}
+/* telas baixas (celular deitado): coluna do time fica fixa e cabe inteira */
+.pvbox{position:sticky;top:0;align-self:start}
+@media (max-height:460px){
+  #pv{max-width:118px}
+  .pvbox{gap:3px}.pvbox .lab{margin:2px 0 0;font-size:9px}
+  .pvbox .cyc .btn.sm{min-height:32px;padding:4px 7px;min-width:34px}
+  .cname{min-height:32px;font-size:11px}
+  .selcard h2{margin:2px 0 6px;font-size:18px}
+}

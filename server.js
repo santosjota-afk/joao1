@@ -10,13 +10,28 @@ const KF = globalThis.KF;
 
 const PORT = process.env.PORT || 3000, MAXP = 6, TICK = 1 / 60;
 const ROOT = __dirname;
-const MIME = {'.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8'};
+const MIME = {'.mp3': 'audio/mpeg', '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8'};
 
 /* ---------- arquivos estáticos (só o jogo) ---------- */
 const server = http.createServer((req, res) => {
   let u = decodeURIComponent((req.url || '/').split('?')[0]);
   if (u === '/health') { res.writeHead(200); return res.end('ok'); }
   if (u === '/') u = '/index.html';
+  const mm = /^\/hinos\/([a-z]{2,4})\.mp3$/.exec(u);
+  if (mm) {                                   // hinos (com suporte a Range, exigido pelo iPhone)
+    const f = path.join(ROOT, 'hinos', mm[1] + '.mp3');
+    return fs.stat(f, (e, st) => {
+      if (e) { res.writeHead(404); return res.end('not found'); }
+      const h = {'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400'}, rg = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+      if (rg) {
+        let s = rg[1] === '' ? Math.max(0, st.size - +rg[2]) : +rg[1], en = rg[1] === '' || rg[2] === '' ? st.size - 1 : Math.min(+rg[2], st.size - 1);
+        if (s > en || s >= st.size) { res.writeHead(416, {'Content-Range': 'bytes */' + st.size}); return res.end(); }
+        res.writeHead(206, Object.assign(h, {'Content-Range': 'bytes ' + s + '-' + en + '/' + st.size, 'Content-Length': en - s + 1}));
+        return fs.createReadStream(f, {start: s, end: en}).pipe(res);
+      }
+      res.writeHead(200, Object.assign(h, {'Content-Length': st.size})); fs.createReadStream(f).pipe(res);
+    });
+  }
   const ok = u === '/index.html' || u === '/style.css' || (/^\/(js\/)?[a-z0-9_]+\.js$/.test(u) && u !== '/server.js');
   const file = path.normalize(path.join(ROOT, u.replace('/js/', '/')));
   if (!ok || !file.startsWith(ROOT + path.sep)) { res.writeHead(404); return res.end('not found'); }
@@ -127,7 +142,7 @@ wss.on('connection', ws => {
       case 'create': {
         if (c.room) leave(c); c.name = clean(m.name); c.sc = KF.SCHOOL_IDS.includes(m.sc) ? m.sc : 'kf'; c.lk = Array.isArray(m.lk) ? m.lk.slice(0, 3).map(n => n | 0) : null;
         const club = KF.CLUBS[m.club] && m.club !== 'ref' ? m.club : 'fig';
-        const rv = KF.CLUBS[club].rivals; const rival = rv.includes(m.rival) ? m.rival : rv[0]; c.club = club;
+        const rv = KF.CLUBS[club].rivals; const rival = KF.CLUBS[m.rival] && m.rival !== 'ref' && m.rival !== club ? m.rival : (rv[0] !== club ? rv[0] : KF.CLUB_LIST.find(x => x.id !== club).id); c.club = club;
         const code = newCode(); if (!code) return send(c, {t: 'err', msg: 'Servidor cheio, tente de novo.'});
         const room = {code, club, rival, host: c.pid, phase: 'lobby', players: new Map(), sim: KF.createGame(), si: 0, tick: 0, reported: 0};
         rooms.set(code, room); room.players.set(c.pid, c); c.room = room; sendInfo(room); break;

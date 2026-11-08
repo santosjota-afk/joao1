@@ -53,6 +53,8 @@ KF.SCHOOLS = [
    desc: 'Chutes acrobáticos. Voadoras muito fortes e mais velocidade, mas socos fracos.', stat: [3, 5, 2]}
 ];
 KF.SCHOOL_IDS = KF.SCHOOLS.map(s => s.id);
+/* hinos: arquivo hinos/<id>.mp3 (se faltar, toca o tema gerado) */
+KF.ANTHEMS = {scz: 1, nau: 1, spt: 1, cap: 1, cfc: 1, cea: 1, for: 1, vit: 1, bah: 1, cru: 1, cam: 1, int: 1, gre: 1, san: 1, spa: 1, pal: 1, cor: 1, vas: 1, bot: 1, flu: 1, ava: 1, fig: 1, fla: 1};
 
 /* Golpes. dmg é absoluto; é multiplicado por K.dm do lutador. */
 KF.ATK = {
