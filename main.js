@@ -212,27 +212,33 @@ function lobbyScreen(m){
   const host = m.host === N.me; let slots = '';
   for (let i = 0; i < m.max; i++) { const p = m.players[i]; slots += '<div class="slot' + (p ? ' on' : '') + '">' + (p ? '<b>' + esc(p.name) + '</b>' + '<br><small class="sk"><i class="sw" style="background:' + swatch(p.club || m.club) + '"></i>' + esc(KF.CLUBS[p.club || m.club].name) + ' · ' + esc(schoolOf(p.sc).name) + '</small>' + (p.pid === m.host ? ' <small>host</small>' : '') + (p.pid === N.me ? ' <small>você</small>' : '') : '<span>vazio</span>') + '</div>'; }
   let sb = ''; for (let i = 0; i < KF.STAGES.length; i++) sb += '<button class="btn sm' + (i === lobbySi ? '' : ' alt') + '" data-act="lsi" data-si="' + i + '">' + (i + 1) + '. ' + esc(KF.STAGES[i].name) + '</button>';
+  const MODES = [['coop', '🤝 COOPERATIVO', 'Todos juntos contra os torcedores'], ['teams', '⚔ TIME × TIME', 'Cada clube é um time; os times se enfrentam'], ['ffa', '🥊 TODOS × TODOS', 'Cada um por si: o último em pé vence']];
+  const md = MODES.find(x => x[0] === (m.mode || 'coop')) || MODES[0];
+  const modeRow = host ? '<div class="stages">' + MODES.map(x => '<button class="btn sm' + (x[0] === md[0] ? '' : ' alt') + '" data-act="lmode" data-m="' + x[0] + '">' + x[1] + '</button>').join('') + '</div><p class="hint" style="animation:none">' + md[2] + '</p>'
+    : '<p class="hint" style="animation:none">Modo: <b>' + md[1] + '</b> — ' + md[2] + '</p>';
+  if (md[0] !== 'coop') sb = '';
   club = m.club; rival = m.rival;
   show('<div class="card wide"><h3>CÓDIGO DA SALA</h3><div class="roomcode">' + esc(m.code) + '</div><p class="vs">' + clubTag(m.club) + ' <b>×</b> ' + clubTag(m.rival) + '</p>' +
-    '<div class="slots">' + slots + '</div>' +
-    (host ? '<div class="stages">' + sb + '</div><div class="row"><button class="btn big" data-act="lstart">⚔ COMEÇAR (' + m.players.length + ')</button></div>' : '<p class="hint" style="animation:none">Aguardando o host começar...</p>') +
+    '<div class="slots">' + slots + '</div>' + modeRow +
+    (host ? '<div class="stages">' + sb + '</div><div class="row"><button class="btn big" data-act="lstart">⚔ COMEÇAR (' + m.players.length + ')</button></div><p id="lMsg" class="hint" style="animation:none;min-height:16px"></p>' : '<p class="hint" style="animation:none">Aguardando o host começar...</p>') +
     '<div class="row"><button class="btn alt" data-act="lpick">🥋 MEU TIME / LUTADOR</button><button class="btn alt" data-act="oleave">SAIR DA SALA</button></div></div>', 'solid');
 }
 N.onroom = m => { if (UI.mode === 'online' || resultPending) return; lobbyScreen(m); };
 N.onerr = msg => { onlineMenu(msg); };
+N.onerr2 = msg => { const e = $('lMsg'); if (e) e.textContent = msg; };
 N.onboard = () => { const b = $('boardBox'); if (b) b.innerHTML = boardHtml(); };
 N.onbegin = m => {
   club = m.club; rival = m.rival; UI.mode = 'title'; hideGame(); au.music('title');
   show('<div class="card"><h3>PREPARE-SE!</h3><h2>' + esc(m.story.name.toUpperCase()) + '</h2><p class="vs">' + clubTag(m.club) + ' <b>×</b> ' + clubTag(m.rival) + '</p><p>' + m.story.intro + '</p><p class="tip">💡 ' + m.story.tip + '</p></div>', 'solid');
 };
 N.onlive = s => {
-  UI.mode = 'online'; showGameUI(true); $('hStage').textContent = 'SALA ' + (N.room ? N.room.code : '') + ' · FASE ' + (s.si + 1);
+  UI.mode = 'online'; showGameUI(true); $('hStage').textContent = 'SALA ' + (N.room ? N.room.code : '') + ' · ' + (s.pv ? (s.pv === 2 ? 'TIME × TIME' : 'TODOS × TODOS') : 'FASE ' + (s.si + 1));
 };
 N.onevent = ev => applyEv(ev);
 N.onend = m => {
   UI.mode = 'title'; hideGame(); resultPending = true; au.music('title');
   const rows = (m.players || []).slice().sort((a, b) => b.pts - a.pts).map((p, i) => '<div class="brow"><b>' + (i + 1) + '</b><span>' + esc(p.name) + '</span><em>' + p.pts + '</em></div>').join('');
-  show('<div class="card"><h2>' + (m.win ? '🏆 PAZ NA ILHA!' : 'FIM DA LUTA') + '</h2><p>' + (m.win ? KF.TEXT.endWin : KF.TEXT.endLose) + '</p>' +
+  show('<div class="card"><h2>' + (m.pv ? '🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') : m.win ? '🏆 PAZ NA ILHA!' : 'FIM DA LUTA') + '</h2><p>' + (m.pv ? 'Fim da briga em grupo!' : m.win ? KF.TEXT.endWin : KF.TEXT.endLose) + '</p>' +
     '<div class="stats"><div class="stat"><b>' + m.score + '</b><span>pontos da sala</span></div><div class="stat"><b>' + m.kos + '</b><span>KOs</span></div></div><div class="board">' + rows + '</div>' +
     '<div class="row"><button class="btn big" data-act="oback">VOLTAR PARA A SALA</button></div></div>', 'solid');
 };
@@ -277,9 +283,10 @@ const ACTIONS = {
   lpick(){
     const m = N.room; if (!m) return; const mine = m.players.find(p => p.pid === N.me);
     if (mine && mine.club) sel.club = mine.club;
-    fighterScreen({team: true, noRival: true, ban: m.rival, title: 'MEU TIME E LUTADOR', back: 'oback', ok(){ commitSel(); N.send({t: 'pick', club: sel.club, sc: sel.school, lk: sel.lk}); if (N.room) lobbyScreen(N.room); }});
+    fighterScreen({team: true, noRival: true, ban: m.mode === 'coop' ? m.rival : null, title: 'MEU TIME E LUTADOR', back: 'oback', ok(){ commitSel(); N.send({t: 'pick', club: sel.club, sc: sel.school, lk: sel.lk}); if (N.room) lobbyScreen(N.room); }});
   },
   lsi(el){ lobbySi = +el.dataset.si; if (N.room) lobbyScreen(N.room); },
+  lmode(el){ N.send({t: 'mode', m: el.dataset.m}); },
   lstart(){ N.send({t: 'start', si: lobbySi}); },
   oleave(){ N.send({t: 'leave'}); N.room = null; UI.mode = 'title'; resultPending = false; onlineMenu(); },
   oback(){ resultPending = false; if (N.room) lobbyScreen(N.room); else onlineMenu(); }
@@ -360,7 +367,7 @@ function frame(ts){
       const ax = In.axis(); G.setAxis(1, ax.x, ax.y); for (const n of ACTS) if (In.take(n)) G.press(1, n);
       G.update(dt); for (const ev of G.drain()) applyEv(ev); V.update(dt);
     }
-    const S = {ents: G.ents, proj: G.proj, items: G.items, cam: G.cam, VW: view.VW, t: G.t, theme: G.stage.theme, me: 1, online: false, curtain: 0};
+    const S = {ents: G.ents, proj: G.proj, items: G.items, cam: G.cam, VW: view.VW, t: G.t, theme: G.stage.theme, cA: club, cB: rival, me: 1, online: false, curtain: 0};
     V.render(ctx, S, run ? dt : 0); if (!UI.modal || G.state !== 'play') hud(S, G.info(), G.score);
   } else if (UI.mode === 'online' && N.live) {
     if (!portrait) sendInput();

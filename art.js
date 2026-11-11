@@ -284,7 +284,7 @@ function garland(g, x1, x2, y, sag, n, R){
   g.strokeStyle = '#3a6a2a'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x1, y); g.quadraticCurveTo((x1 + x2) / 2, y + sag, x2, y); g.stroke();
   for (let i = 0; i <= n; i++) { const t = i / n, px = x1 + (x2 - x1) * t, py = y + 2 * t * (1 - t) * sag; g.fillStyle = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#ff9a1a' : '#ffc21a'; g.beginPath(); g.arc(px, py + 3, 3, 0, TAU); g.fill(); }
 }
-function makeStage(theme){
+function makeStage(theme, ca, cb){
   const H = 270, HZ = 150, rs = 1.6, S = {theme, amb: [], bursts: []};
   const R = mulberry(theme.length * 977 + 11);
 
@@ -374,11 +374,13 @@ function makeStage(theme){
       glow(g, 480, 70, 170, '#c8202c', .35); g.fillStyle = '#d6202c'; g.beginPath(); g.arc(480, 66, 30, 0, TAU); g.fill();
       for (let x = 60; x < w; x += 120) lantern(g, x, 22, 8, '#d83a2a', '#ff8a5a');
     });
+    const CA = KF.CLUBS[ca] || KF.CLUBS.fig, CB = KF.CLUBS[cb] || KF.CLUBS.ava;
+    const flagCol = c => (c.a === '#f5f5f5' || c.a === '#ffffff') ? c.b : c.a;
     S.bann = layer(960, 100, rs, (g, w, h) => {
       for (let i = 0; i < 12; i++) {
         const x = 20 + i * 80, fig = i % 2 === 0; g.fillStyle = '#e8d8b0'; g.fillRect(x - 3, 0, 36, 3);
         g.beginPath(); g.moveTo(x, 3); g.lineTo(x + 30, 3); g.lineTo(x + 30, 70); g.lineTo(x + 15, 80); g.lineTo(x, 70); g.closePath(); g.save(); g.clip();
-        g.fillStyle = fig ? '#111' : '#1c56d8'; g.fillRect(x, 0, 30, 90); g.fillStyle = '#fff'; for (let s = 0; s < 30; s += 10) g.fillRect(x + s + 5, 0, 5, 90); g.restore();
+        const cc = fig ? CA : CB; g.fillStyle = cc.a; g.fillRect(x, 0, 30, 90); g.fillStyle = cc.b === cc.a ? '#fff' : cc.b; for (let s = 0; s < 30; s += 10) g.fillRect(x + s + 5, 0, 5, 90); g.restore();
         g.fillStyle = '#f2c200'; g.beginPath(); g.arc(x + 15, 34, 5, 0, TAU); g.fill();
       }
     });
@@ -386,10 +388,10 @@ function makeStage(theme){
       const r = mulberry(5); const row = [{y: 64, s: 1}, {y: 48, s: .9}, {y: 33, s: .8}];
       g.fillStyle = '#1b0f0c'; g.fillRect(0, 0, w, h);
       for (const rw of row) for (let x = 6; x < w; x += 15 * rw.s) {
-        const t = r() , jb = Math.sin(ph * PI + x * .3) * 2.2, pal = [['#111', '#fff'], ['#1c56d8', '#fff'], ['#111', '#fff'], ['#1c56d8', '#fff']][Math.floor(r() * 4)];
+        const t = r() , jb = Math.sin(ph * PI + x * .3) * 2.2, cl = r() < .5 ? CA : CB, pal = [cl.a, cl.b === cl.a ? '#fff' : cl.b];
         g.fillStyle = pal[0]; g.fillRect(x - 5 * rw.s, rw.y - 12 * rw.s + jb, 10 * rw.s, 14 * rw.s); g.fillStyle = pal[1]; g.fillRect(x - 1.5 * rw.s, rw.y - 12 * rw.s + jb, 3 * rw.s, 14 * rw.s);
         g.fillStyle = KF.SKINS[Math.floor(r() * 5)]; g.beginPath(); g.arc(x, rw.y - 17 * rw.s + jb, 4.6 * rw.s, 0, TAU); g.fill();
-        if (r() < .3) { const up = Math.sin(ph * PI + x) * 3; line(g, x + 5 * rw.s, rw.y - 10 * rw.s + jb, x + 8 * rw.s, rw.y - 28 * rw.s + jb + up, 1.2, '#ddd'); g.fillStyle = pal[0] === '#111' ? '#111' : '#1c56d8'; g.fillRect(x + 8 * rw.s, rw.y - 29 * rw.s + jb + up, 10 * rw.s, 6 * rw.s); }
+        if (r() < .3) { const up = Math.sin(ph * PI + x) * 3; line(g, x + 5 * rw.s, rw.y - 10 * rw.s + jb, x + 8 * rw.s, rw.y - 28 * rw.s + jb + up, 1.2, '#ddd'); g.fillStyle = flagCol(cl); g.fillRect(x + 8 * rw.s, rw.y - 29 * rw.s + jb + up, 10 * rw.s, 6 * rw.s); }
       }
     });
     S.crowdA = mkCrowd(0); S.crowdB = mkCrowd(1);

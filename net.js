@@ -34,6 +34,7 @@ function handle(m){
     case 'board': N.board = m.rows || []; if (N.onboard) N.onboard(); break;
     case 'room': N.room = m; if (N.onroom) N.onroom(m); break;
     case 'err': if (N.onerr) N.onerr(m.msg); break;
+    case 'err2': if (N.onerr2) N.onerr2(m.msg); break;
     case 'begin': N.snaps = []; N.objs = {}; N.live = false; if (N.onbegin) N.onbegin(m); break;
     case 'snap': {
       N.snaps.push({rt: performance.now(), s: m.s}); if (N.snaps.length > 6) N.snaps.shift();
@@ -73,7 +74,7 @@ N.state = function(){
   for (const id in N.objs) if (!seen[id]) delete N.objs[id];
   const s = b.s;
   return {ents, proj: s.pr.map(p => ({type: p.t, x: p.x, y: p.y, z: p.z, spin: p.sp, side: p.s ? 'good' : 'bad', deflected: !!p.df})), items: s.it,
-    cam: lerp(a.s.cam, s.cam, al), t: performance.now() / 1000, theme: KF.STAGES[s.si].theme, me: N.me, online: true, pl: s.pl, sc: s.sc, kos: s.kos, si: s.si, wi: s.wi, st: s.st};
+    cam: lerp(a.s.cam, s.cam, al), t: performance.now() / 1000, theme: s.pv ? 'dojo' : KF.STAGES[s.si].theme, cA: s.club, cB: s.rival, me: N.me, online: true, pl: s.pl, sc: s.sc, kos: s.kos, si: s.si, pv: s.pv, win: s.win, wi: s.wi, st: s.st};
 };
 
 /* predição local do próprio jogador: o movimento aparece na hora (o servidor confirma depois) */

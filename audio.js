@@ -4,7 +4,7 @@
 (function(){
 const KF = window.KF = window.KF || {};
 let ctx = null, master, musicG, sfxG, rev, revG, noiseBuf, trk = null;
-let muted = false, anth = null, anthT = 0;
+let muted = false, anth = null, anthT = 0; const anthBuf = {}, anthLoad = {};
 try { muted = localStorage.getItem('kfi_mute') === '1'; } catch (e) {}
 
 const SC = {hira: [0, 2, 3, 7, 8], insen: [0, 1, 5, 7, 10], yo: [0, 2, 4, 7, 9], thai: [0, 2, 4, 7, 9]};
@@ -241,18 +241,28 @@ const A = KF.audio = {
       if (!(KF.ANTHEMS && KF.ANTHEMS[id])) { A.music('club_' + id); return; }
       if (anth && anth.id === id) return;
       A.stopMusic(0.25);
-      const a = new Audio('hinos/' + id + '.mp3'); a.loop = true; a.preload = 'auto';
-      let src, g; try { src = ctx.createMediaElementSource(a); g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(musicG); } catch (e) { A.music('club_' + id); return; }
-      const o = anth = {id, a, g, src};
-      a.addEventListener('error', () => { if (anth === o) { A.stopAnthem(0.1); A.music('club_' + id); } });
-      const pr = a.play(); if (pr && pr.catch) pr.catch(() => {});
-      g.gain.setTargetAtTime(1.2, ctx.currentTime, 0.25);
+      const o = anth = {id, g: null, src: null};
+      const play = buf => {
+        if (anth !== o) return;
+        try {
+          if (ctx.state === 'suspended') ctx.resume();
+          const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+          const g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(musicG);
+          o.src = src; o.g = g; src.start(0);
+          g.gain.setTargetAtTime(1.2, ctx.currentTime, 0.25);
+        } catch (e) { fail(); }
+      };
+      const fail = () => { if (anth === o) { anth = null; A.music('club_' + id); } };
+      if (anthBuf[id]) { play(anthBuf[id]); return; }
+      const dec = ab => new Promise((ok, no) => { const p = ctx.decodeAudioData(ab, ok, no); if (p && p.then) p.then(ok, no); });
+      (anthLoad[id] || (anthLoad[id] = fetch('hinos/' + id + '.mp3').then(r => { if (!r.ok) throw new Error('http'); return r.arrayBuffer(); }).then(dec).then(b => anthBuf[id] = b)))
+        .then(play, () => { delete anthLoad[id]; fail(); });
     }, 200);
   },
   stopAnthem(fade){
     clearTimeout(anthT); const o = anth; if (!o) return; anth = null;
     try { o.g.gain.setTargetAtTime(0, ctx.currentTime, (fade || 0.25) / 3); } catch (e) {}
-    setTimeout(() => { try { o.a.pause(); o.a.removeAttribute('src'); o.a.load(); o.src.disconnect(); o.g.disconnect(); } catch (e) {} }, 900);
+    setTimeout(() => { try { o.src.stop(); o.src.disconnect(); o.g.disconnect(); } catch (e) {} }, 900);
   },
   jingle(kind){        // vitória / derrota
     if (!ctx) return;

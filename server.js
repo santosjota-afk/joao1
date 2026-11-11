@@ -63,9 +63,9 @@ const clean = n => (String(n || '').replace(/[^\p{L}\p{N} _-]/gu, '').trim().sli
 const CH = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 function newCode(){ for (let i = 0; i < 50; i++) { let c = ''; for (let k = 0; k < 4; k++) c += CH[Math.floor(Math.random() * CH.length)]; if (!rooms.has(c)) return c; } return null; }
 
-function pickClub(id, r){ return KF.CLUBS[id] && id !== 'ref' && id !== r.rival ? id : (r.club !== r.rival ? r.club : 'fig'); }
+function pickClub(id, r){ return KF.CLUBS[id] && id !== 'ref' && (r.mode !== 'coop' || id !== r.rival) ? id : (r.club !== r.rival ? r.club : 'fig'); }
 function roomInfo(r){
-  return {t: 'room', code: r.code, club: r.club, rival: r.rival, host: r.host, phase: r.phase, max: MAXP,
+  return {t: 'room', code: r.code, mode: r.mode, club: r.club, rival: r.rival, host: r.host, phase: r.phase, max: MAXP,
     players: [...r.players.values()].map(c => ({pid: c.pid, name: c.name, sc: c.sc, lk: c.lk, club: c.club}))};
 }
 function sendInfo(r){ for (const c of r.players.values()) send(c, Object.assign(roomInfo(r), {you: c.pid})); }
@@ -81,9 +81,12 @@ function leave(c){
 function beginStage(r, si, carry){
   r.phase = 'play'; r.si = si; r.tick = 0;
   r.sim.VW = 440; r.hold = 3.5;
-  r.sim.start(si, r.club, r.rival, {mp: true, carry, players: [...r.players.values()].map(c => ({pid: c.pid, name: c.name, sc: c.sc, lk: c.lk, club: c.club}))});
+  r.sim.start(si, r.club, r.rival, {mp: true, carry, pvp: r.mode === 'coop' ? null : r.mode, players: [...r.players.values()].map(c => ({pid: c.pid, name: c.name, sc: c.sc, lk: c.lk, club: c.club}))});
   r.rep = {}; r.reported = carry ? carry.score : 0;
-  toRoom(r, {t: 'begin', si, club: r.club, rival: r.rival, story: {name: KF.STAGES[si].name, intro: KF.STAGES[si].intro, tip: KF.STAGES[si].tip}});
+  const pv = r.mode !== 'coop';
+  toRoom(r, {t: 'begin', si, pv: pv ? r.mode : 0, club: r.club, rival: r.rival, story: pv
+    ? {name: r.mode === 'teams' ? 'Time × Time' : 'Todos contra todos', intro: r.mode === 'teams' ? 'Cada clube forma um time. Derrube os outros times! Quem sobrar vence.' : 'Cada um por si! O último lutador em pé vence.', tip: 'Cada nocaute vale 300 pontos. Pegue os pastéis para recuperar vida.'}
+    : {name: KF.STAGES[si].name, intro: KF.STAGES[si].intro, tip: KF.STAGES[si].tip}});
 }
 function reportBoard(r){
   r.rep = r.rep || {};
@@ -91,14 +94,16 @@ function reportBoard(r){
   r.reported = r.sim.score;
 }
 function finish(r, win){
+  const pv = r.sim.pvp ? {winner: r.sim.winner, wc: r.sim.winClub, pv: r.sim.pvp} : {};
   const seen = new Set(); for (const c of r.players.values()) { const k = c.club || r.club; if (!seen.has(k) && board[k]) { board[k].runs++; seen.add(k); } }
   const sim = r.sim; reportBoard(r);
-  toRoom(r, {t: 'end', win, score: sim.score, kos: sim.kos, players: sim.info().map(p => ({name: p.name, pts: p.pts}))});
+  toRoom(r, Object.assign({t: 'end', win, score: sim.score, kos: sim.kos, players: sim.info().map(p => ({name: p.name, pts: p.pts, cl: p.cl}))}, pv));
   r.phase = 'lobby'; sendInfo(r);
 }
 function handleEvents(r, evs){
   for (const e of evs) {
-    if (e[0] === 'stageclear') {
+    if (e[0] === 'stageclear' && r.sim.pvp) { reportBoard(r); r.phase = 'wait'; r.timer = setTimeout(() => { if (r.players.size) finish(r, true); }, 600); }
+    else if (e[0] === 'stageclear') {
       const sim = r.sim; reportBoard(r);
       if (r.si < KF.STAGES.length - 1) { const carry = {score: sim.score}; r.timer = setTimeout(() => { if (r.players.size && r.phase === 'wait') beginStage(r, r.si + 1, carry); }, 2500); r.phase = 'wait'; }
       else { r.phase = 'wait'; r.timer = setTimeout(() => { if (r.players.size) finish(r, true); }, 1500); }
@@ -144,7 +149,7 @@ wss.on('connection', ws => {
         const club = KF.CLUBS[m.club] && m.club !== 'ref' ? m.club : 'fig';
         const rv = KF.CLUBS[club].rivals; const rival = KF.CLUBS[m.rival] && m.rival !== 'ref' && m.rival !== club ? m.rival : (rv[0] !== club ? rv[0] : KF.CLUB_LIST.find(x => x.id !== club).id); c.club = club;
         const code = newCode(); if (!code) return send(c, {t: 'err', msg: 'Servidor cheio, tente de novo.'});
-        const room = {code, club, rival, host: c.pid, phase: 'lobby', players: new Map(), sim: KF.createGame(), si: 0, tick: 0, reported: 0};
+        const room = {code, mode: 'coop', club, rival, host: c.pid, phase: 'lobby', players: new Map(), sim: KF.createGame(), si: 0, tick: 0, reported: 0};
         rooms.set(code, room); room.players.set(c.pid, c); c.room = room; sendInfo(room); break;
       }
       case 'join': {
@@ -157,7 +162,13 @@ wss.on('connection', ws => {
         c.club = pickClub(m.club, room);
         room.players.set(c.pid, c); c.room = room; sendInfo(room); break;
       }
-      case 'start': if (r && r.phase === 'lobby' && r.host === c.pid) { const si = Math.max(0, Math.min(KF.STAGES.length - 1, m.si | 0)); beginStage(r, si, null); } break;
+      case 'mode': if (r && r.phase === 'lobby' && r.host === c.pid && ['coop', 'teams', 'ffa'].includes(m.m)) { r.mode = m.m; sendInfo(r); } break;
+      case 'start': if (r && r.phase === 'lobby' && r.host === c.pid) {
+        if (r.mode !== 'coop') {
+          const ps = [...r.players.values()];
+          if (ps.length < 2) return send(c, {t: 'err2', msg: 'Precisa de pelo menos 2 jogadores para brigar.'});
+          if (r.mode === 'teams' && new Set(ps.map(x => x.club)).size < 2) return send(c, {t: 'err2', msg: 'No Time × Time precisa de pelo menos 2 clubes diferentes na sala.'});
+        } const si = Math.max(0, Math.min(KF.STAGES.length - 1, m.si | 0)); beginStage(r, si, null); } break;
       case 'pick': if (r && r.phase === 'lobby') { c.sc = KF.SCHOOL_IDS.includes(m.sc) ? m.sc : c.sc; c.lk = Array.isArray(m.lk) ? m.lk.slice(0, 3).map(n => n | 0) : c.lk; c.club = pickClub(m.club, r); sendInfo(r); } break;
       case 'leave': leave(c); break;
       case 'ping': send(c, {t: 'pong', ts: m.ts}); break;

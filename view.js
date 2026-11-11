@@ -8,7 +8,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 const V = KF.view = {fx: [], shake: 0, bg: {}, demo: null, ghosts: [], gt: {}, flashA: 0, flashC: '#fff'};
 
-V.stage = theme => V.bg[theme] || (V.bg[theme] = art.makeStage(theme));
+V.stage = (theme, a, b) => { const k = theme === 'dojo' ? theme + '|' + a + '|' + b : theme; return V.bg[k] || (V.bg[k] = art.makeStage(theme, a, b)); };
 V.lookOf = f => f.look || (f.look = {skin: KF.SKINS[f.lk[0]], hair: KF.HAIRS[f.lk[1]], style: KF.STYLES[f.lk[2]]});
 
 function fxAdd(o){ if (V.fx.length < 260) V.fx.push(o); }
@@ -115,7 +115,7 @@ V.render = function(g, S, dt){
   const cam = S.cam, VW = S.VW, T = S.t, me = S.me;
   g.save();
   if (V.shake > .3) g.translate(rand(-V.shake, V.shake) * .6, rand(-V.shake, V.shake) * .6);
-  V.stage(S.theme).draw(g, cam, VW, T, dt);
+  V.stage(S.theme, S.cA, S.cB).draw(g, cam, VW, T, dt);
   const L = [];
   for (const f of S.ents) {            // imagens residuais em golpes rápidos
     if (dt > 0 && !f.dead) {

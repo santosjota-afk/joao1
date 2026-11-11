@@ -46,7 +46,9 @@ KF.createGame = function(){
   /* o: {players:[{pid,name}], carry:{score,ki}, mp:bool} */
   G.start = function(si, club, rival, o){
     o = o || {}; const st = KF.STAGES[si];
-    G.stage = st; G.si = si; G.club = club; G.rival = rival || KF.rivalOf(club); G.mp = !!o.mp; G.state = 'play';
+    G.pvp = o.pvp || null; G.winner = ''; G.winClub = ''; G.pt = 0;
+    G.stage = G.pvp ? {id: 0, name: 'ARENA DA ILHA', theme: 'dojo', len: G.VW || 440, waves: [], cap: 0, tokens: 0, allies: 0, music: 'battle3', intro: '', tip: ''} : st;
+    G.si = si; G.club = club; G.rival = rival || KF.rivalOf(club); G.mp = !!o.mp; G.state = 'play';
     G.ents = []; G.proj = []; G.items = []; G.players = []; G.queue = []; events = [];
     G.t = 0; G.cam = 0; G.camMin = 0; G.wi = 0; G.waveActive = false; G.go = false; G.clearT = 0; G.reported = false;
     G.score = o.carry ? o.carry.score : 0; G.kos = 0; G.maxCombo = 0; G.hitstop = 0; G.shake = 0; G.startScore = G.score; G.hitsTaken = 0;
@@ -54,13 +56,19 @@ KF.createGame = function(){
     G.nP = pls.length;
     pls.forEach((pl, i) => { const p = G.addPlayer(pl.pid, pl.name, i, pl.sc, pl.lk, pl.club); if (o.carry && o.carry.ki != null && !G.mp) p.ki = o.carry.ki; });
     G.player = G.players[0];
-    const nAllies = G.mp ? (st.truce ? 2 : 0) : st.allies;
+    if (G.pvp) {
+      const ps = G.players, VW = G.VW || 440;
+      G.club = ps[0].club; G.rival = (ps.find(p => p.club !== ps[0].club) || {club: G.rival}).club;
+      const groups = G.pvp === 'teams' ? [...new Set(ps.map(p => p.club))].map(c => ps.filter(p => p.club === c)) : ps.map(p => [p]);
+      groups.forEach((gr, k) => { const bx = 50 + (groups.length > 1 ? k * (VW - 100) / (groups.length - 1) : (VW - 100) / 2); gr.forEach((p, j) => { p.x = bx + (j % 2) * 18; p.y = 196 + ((j + k) % 4) * 16; p.face = bx < VW / 2 ? 1 : -1; p.lives = 2; }); });
+    }
+    const nAllies = G.pvp ? 0 : G.mp ? (st.truce ? 2 : 0) : st.allies;
     for (let i = 0; i < nAllies; i++) {
       const c = st.truce && i % 2 === 1 ? G.rival : club;
       const a = mk('ally', c, 'good', 36 + i * 22, 190 + i * 28); a.entered = true; a.ally = true;
     }
-    E('music', st.music);
-    E('banner', 'FASE ' + st.id + ' — ' + st.name.toUpperCase(), 1900);
+    E('music', G.stage.music);
+    E('banner', G.pvp ? (G.pvp === 'teams' ? 'TIME × TIME!' : 'TODOS CONTRA TODOS!') : 'FASE ' + st.id + ' — ' + st.name.toUpperCase(), 1900);
   };
 
   /* ---------- utilidades ---------- */
@@ -114,14 +122,18 @@ KF.createGame = function(){
     E('sfx', type === 'ball' ? 'ball' : 'card');
   }
 
+  function isFoe(f, t){
+    if (G.pvp) return t !== f && !!t.isPlayer && (G.pvp === 'ffa' || t.club !== f.club);
+    return t.side === (f.side === 'good' ? 'bad' : 'good');
+  }
   function strike(f, a){
-    const foe = f.side === 'good' ? 'bad' : 'good';
+    if (G.pvp && G.state !== 'play') return;
     for (const t of G.ents) {
-      if (t.side !== foe || t.dead || t.st === 'down' || t.st === 'getup' || f.hitSet.has(t)) continue;
+      if (!isFoe(f, t) || t.dead || t.st === 'down' || t.st === 'getup' || f.hitSet.has(t)) continue;
       const dx = t.x - f.x;
       const inX = a.around ? Math.abs(dx) <= a.rng + 6 * t.scale : (dx * f.face >= -8 && dx * f.face <= a.rng + 7 * t.scale);
       if (!inX || Math.abs(t.y - f.y) > a.dy || Math.abs(t.z - f.z) > 38) continue;
-      f.hitSet.add(t); damage(t, Math.round(a.dmg * (f.K.dm || 1) * schoolMul(f, f.atkKey)), f, a);
+      f.hitSet.add(t); damage(t, Math.round(a.dmg * (f.K.dm || 1) * schoolMul(f, f.atkKey) * (G.pvp ? .7 : 1)), f, a);
     }
     if (f.side === 'good') for (const p of G.proj) {      // devolver bolas e cartões
       if (p.side === 'good') continue;
@@ -158,6 +170,7 @@ KF.createGame = function(){
     if (kill) {
       t.dead = true; t.hp = 0; knockdown(t, dir, att.kb * 1.1, 200);
       E('sfx', 'ko');
+      if (G.pvp && cr && t.isPlayer && cr !== t) { cr.pts += 300; G.score += 300; G.kos++; popText(t.x, cy - 26, 'NOCAUTE!', '#ffd23a', 16); }
       if (t.side === 'bad') {
         G.kos++; const sc = t.K.score || 100; G.score += sc; if (cr) cr.pts += sc;
         popText(t.x, cy - 26, t.boss ? 'GOOOOL!' : pick(['GOL!', 'GOL!', 'GOLAÇO!']), '#ffd23a', t.boss ? 20 : 15);
@@ -351,12 +364,21 @@ KF.createGame = function(){
 
   function playerDied(p){
     if (p.lives > 1) {
-      p.lives--; p.hp = p.max; p.dead = false; p.st = 'getup'; p.t = 0; p.inv = 2.4; p.x = G.cam + 60; p.y = rand(200, 235); p.z = 0; p.vx = 0; p.ki = Math.max(p.ki, 30); p.landed = false;
+      p.lives--; p.hp = p.max; p.dead = false; p.st = 'getup'; p.t = 0; p.inv = 2.4; p.x = G.pvp ? G.cam + rand(50, G.VW - 50) : G.cam + 60; p.y = rand(200, 235); p.z = 0; p.vx = 0; p.ki = Math.max(p.ki, 30); p.landed = false;
       E('banner', (G.mp ? p.name + ' voltou!' : 'VOCÊ VOLTOU!') + ' (' + p.lives + ' vidas)', 1300); E('sfx', 'pickup');
     } else {
       p.out = true; p.remove = true;
-      if (G.state === 'play' && G.players.every(q => q.out)) { G.state = 'over'; G.clearT = 0; E('jingle', 'lose'); }
+      if (G.state === 'play') { if (G.pvp) pvpCheck(); else if (G.players.every(q => q.out)) { G.state = 'over'; G.clearT = 0; E('jingle', 'lose'); } }
     }
+  }
+  function pvpCheck(){
+    if (G.state !== 'play') return;
+    const al = G.players.filter(p => !p.out && !p.left);
+    if (new Set(al.map(p => G.pvp === 'teams' ? p.club : p.pid)).size > 1) return;
+    G.state = 'clear'; G.clearT = 0; const w = al[0];
+    G.winner = !w ? '' : G.pvp === 'teams' ? KF.CLUBS[w.club].name : w.name; G.winClub = w ? w.club : '';
+    E('jingle', 'win'); E('banner', w ? G.winner.toUpperCase() + ' VENCEU!' : 'EMPATE!', 2600);
+    for (const p of al) { p.st = 'win'; p.t = 0; }
   }
 
   /* ---------- ondas ---------- */
@@ -410,7 +432,8 @@ KF.createGame = function(){
     }
     if (G.hitstop > 0) { G.hitstop -= dt; return; }
     G.shake = Math.max(0, G.shake - 22 * dt);
-    if (G.state === 'play') {
+    if (G.state === 'play' && G.pvp) { G.pt += dt; if (G.pt > 11 && G.items.length < 2) { G.pt = 0; G.items.push({type: 'pastel', x: G.cam + rand(60, G.VW - 60), y: rand(200, 240)}); } }
+    if (G.state === 'play' && !G.pvp) {
       const lim = G.wi < G.stage.waves.length ? wAt(G.wi) : G.stage.len - G.VW;
       if (!G.waveActive && G.wi < G.stage.waves.length && G.cam >= lim - 1 && G.t > 1.6) startWave();
       if (G.waveActive) {
@@ -485,13 +508,13 @@ KF.createGame = function(){
   G.removePlayer = function(pid){
     const p = byPid(pid); if (!p || p.left) return;
     p.left = true; p.out = true; p.remove = true; p.dead = true;
-    if (G.state === 'play' && G.players.every(q => q.out)) { G.state = 'over'; G.clearT = 0; E('jingle', 'lose'); }
+    if (G.state === 'play') { if (G.pvp) pvpCheck(); else if (G.players.every(q => q.out)) { G.state = 'over'; G.clearT = 0; E('jingle', 'lose'); } }
   };
-  G.info = () => G.players.filter(p => !p.left).map(p => ({pid: p.pid, name: p.name, hp: Math.round(p.hp), max: p.max, ki: Math.round(p.ki), lives: p.lives, out: p.out, pts: p.pts, combo: p.combo}));
+  G.info = () => G.players.filter(p => !p.left).map(p => ({pid: p.pid, name: p.name, hp: Math.round(p.hp), max: p.max, ki: Math.round(p.ki), lives: p.lives, out: p.out, pts: p.pts, combo: p.combo, cl: p.club}));
   const r1 = v => Math.round(v * 10) / 10;
   G.snapshot = function(){
     return {
-      t: G.t, cam: r1(G.cam), si: G.si, wi: G.wi, st: G.state, go: G.go ? 1 : 0, sc: G.score, kos: G.kos, mc: G.maxCombo, club: G.club, rival: G.rival,
+      t: G.t, cam: r1(G.cam), si: G.si, wi: G.wi, st: G.state, go: G.go ? 1 : 0, sc: G.score, kos: G.kos, mc: G.maxCombo, club: G.club, rival: G.rival, pv: G.pvp === 'teams' ? 2 : G.pvp === 'ffa' ? 1 : 0, win: G.winner, wc: G.winClub,
       f: G.ents.map(f => ({i: f.id, k: f.kind, c: f.club, s: f.side === 'good' ? 1 : 0, x: r1(f.x), y: r1(f.y), z: r1(f.z), fc: f.face, st: f.st, t: Math.round(f.t * 100) / 100, w: Math.round(f.walkT * 100) / 100,
         hp: Math.round(f.hp), mx: f.max, fl: f.flash > 0 ? 1 : 0, iv: f.inv > 0 ? 1 : 0, d: f.dead ? 1 : 0, fd: Math.round(f.fade * 100) / 100, b: f.bar > 0 ? 1 : 0, p: f.pid != null ? f.pid : 0, n: f.n, ak: f.atkKey, lk: f.lk, sc: f.scI || 0, vz: Math.round(f.vz), al: f.ally ? 1 : 0, nm: f.name})),
       pr: G.proj.map(p => ({t: p.type, x: r1(p.x), y: r1(p.y), z: p.z, sp: r1(p.spin), s: p.side === 'good' ? 1 : 0, df: p.deflected ? 1 : 0})),
