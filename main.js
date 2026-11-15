@@ -213,17 +213,20 @@ function lobbyScreen(m){
   for (let i = 0; i < m.max; i++) { const p = m.players[i]; slots += '<div class="slot' + (p ? ' on' : '') + '">' + (p ? '<b>' + esc(p.name) + '</b>' + '<br><small class="sk"><i class="sw" style="background:' + swatch(p.club || m.club) + '"></i>' + esc(KF.CLUBS[p.club || m.club].name) + ' · ' + esc(schoolOf(p.sc).name) + '</small>' + (p.pid === m.host ? ' <small>host</small>' : '') + (p.pid === N.me ? ' <small>você</small>' : '') : '<span>vazio</span>') + '</div>'; }
   let sb = ''; for (let i = 0; i < KF.STAGES.length; i++) sb += '<button class="btn sm' + (i === lobbySi ? '' : ' alt') + '" data-act="lsi" data-si="' + i + '">' + (i + 1) + '. ' + esc(KF.STAGES[i].name) + '</button>';
   const MODES = [['coop', '🤝 COOPERATIVO', 'Todos juntos contra os torcedores'], ['teams', '⚔ TIME × TIME', 'Cada clube é um time; os times se enfrentam'], ['ffa', '🥊 TODOS × TODOS', 'Cada um por si: o último em pé vence']];
+  const RN = [1, 3, 5, 7, 10], rn = m.rounds || 3;
   const md = MODES.find(x => x[0] === (m.mode || 'coop')) || MODES[0];
   const modeRow = host ? '<div class="stages">' + MODES.map(x => '<button class="btn sm' + (x[0] === md[0] ? '' : ' alt') + '" data-act="lmode" data-m="' + x[0] + '">' + x[1] + '</button>').join('') + '</div><p class="hint" style="animation:none">' + md[2] + '</p>'
     : '<p class="hint" style="animation:none">Modo: <b>' + md[1] + '</b> — ' + md[2] + '</p>';
+  const roundRow = md[0] === 'coop' ? '' : (host ? '<p class="hint" style="animation:none;margin:6px 0 2px">Quantos rounds?</p><div class="stages">' + RN.map(n => '<button class="btn sm' + (n === rn ? '' : ' alt') + '" data-act="lrounds" data-n="' + n + '">' + n + '</button>').join('') + '</div>' : '<p class="hint" style="animation:none">Rounds: <b>' + rn + '</b></p>');
   if (md[0] !== 'coop') sb = '';
   club = m.club; rival = m.rival;
   show('<div class="card wide"><h3>CÓDIGO DA SALA</h3><div class="roomcode">' + esc(m.code) + '</div><p class="vs">' + clubTag(m.club) + ' <b>×</b> ' + clubTag(m.rival) + '</p>' +
-    '<div class="slots">' + slots + '</div>' + modeRow +
+    '<div class="slots">' + slots + '</div>' + modeRow + roundRow +
     (host ? '<div class="stages">' + sb + '</div><div class="row"><button class="btn big" data-act="lstart">⚔ COMEÇAR (' + m.players.length + ')</button></div><p id="lMsg" class="hint" style="animation:none;min-height:16px"></p>' : '<p class="hint" style="animation:none">Aguardando o host começar...</p>') +
     '<div class="row"><button class="btn alt" data-act="lpick">🥋 MEU TIME / LUTADOR</button><button class="btn alt" data-act="oleave">SAIR DA SALA</button></div></div>', 'solid');
 }
 N.onroom = m => { if (UI.mode === 'online' || resultPending) return; lobbyScreen(m); };
+function myClub(){ if (UI.mode === 'online' && N.room) { const p = N.room.players.find(q => q.pid === N.me); if (p && p.club) return p.club; } return club; }
 N.onerr = msg => { onlineMenu(msg); };
 N.onerr2 = msg => { const e = $('lMsg'); if (e) e.textContent = msg; };
 N.onboard = () => { const b = $('boardBox'); if (b) b.innerHTML = boardHtml(); };
@@ -235,11 +238,16 @@ N.onlive = s => {
   UI.mode = 'online'; showGameUI(true); $('hStage').textContent = 'SALA ' + (N.room ? N.room.code : '') + ' · ' + (s.pv ? (s.pv === 2 ? 'TIME × TIME' : 'TODOS × TODOS') : 'FASE ' + (s.si + 1));
 };
 N.onevent = ev => applyEv(ev);
+function rankHtml(st){ return '<div class="board">' + (st || []).map((p, i) => '<div class="brow"><b>' + (i + 1) + '</b><span>' + (p.cl ? clubTag(p.cl) + ' ' : '') + esc(p.name) + '</span><em>' + p.w + ' 🏆 · ' + p.pts + ' pts</em></div>').join('') + '</div>'; }
+N.onround = m => {
+  UI.mode = 'title'; hideGame(); au.music('title');
+  show('<div class="card"><h3>ROUND ' + m.round + ' DE ' + m.rounds + '</h3><h2>🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') + '</h2><p>Placar parcial — o próximo round já vai começar...</p>' + rankHtml(m.standings) + '</div>', 'solid');
+};
 N.onend = m => {
   UI.mode = 'title'; hideGame(); resultPending = true; au.music('title');
   const rows = (m.players || []).slice().sort((a, b) => b.pts - a.pts).map((p, i) => '<div class="brow"><b>' + (i + 1) + '</b><span>' + esc(p.name) + '</span><em>' + p.pts + '</em></div>').join('');
-  show('<div class="card"><h2>' + (m.pv ? '🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') : m.win ? '🏆 PAZ NA ILHA!' : 'FIM DA LUTA') + '</h2><p>' + (m.pv ? 'Fim da briga em grupo!' : m.win ? KF.TEXT.endWin : KF.TEXT.endLose) + '</p>' +
-    '<div class="stats"><div class="stat"><b>' + m.score + '</b><span>pontos da sala</span></div><div class="stat"><b>' + m.kos + '</b><span>KOs</span></div></div><div class="board">' + rows + '</div>' +
+  show('<div class="card"><h2>' + (m.pv ? '🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') : m.win ? '🏆 PAZ NA ILHA!' : 'FIM DA LUTA') + '</h2><p>' + (m.pv ? (m.rounds > 1 ? 'Campeão depois de ' + m.rounds + ' rounds!' : 'Fim da briga em grupo!') : m.win ? KF.TEXT.endWin : KF.TEXT.endLose) + '</p>' +
+    (m.rank ? '<h3>CLASSIFICAÇÃO FINAL</h3>' + rankHtml(m.rank) : '<div class="stats"><div class="stat"><b>' + m.score + '</b><span>pontos da sala</span></div><div class="stat"><b>' + m.kos + '</b><span>KOs</span></div></div><div class="board">' + rows + '</div>') +
     '<div class="row"><button class="btn big" data-act="oback">VOLTAR PARA A SALA</button></div></div>', 'solid');
 };
 N.onclose = () => {
@@ -286,6 +294,7 @@ const ACTIONS = {
     fighterScreen({team: true, noRival: true, ban: m.mode === 'coop' ? m.rival : null, title: 'MEU TIME E LUTADOR', back: 'oback', ok(){ commitSel(); N.send({t: 'pick', club: sel.club, sc: sel.school, lk: sel.lk}); if (N.room) lobbyScreen(N.room); }});
   },
   lsi(el){ lobbySi = +el.dataset.si; if (N.room) lobbyScreen(N.room); },
+  lrounds(el){ N.send({t: 'rounds', n: +el.dataset.n}); },
   lmode(el){ N.send({t: 'mode', m: el.dataset.m}); },
   lstart(){ N.send({t: 'start', si: lobbySi}); },
   oleave(){ N.send({t: 'leave'}); N.room = null; UI.mode = 'title'; resultPending = false; onlineMenu(); },
@@ -307,7 +316,7 @@ let goOn = false;
 function applyEv(ev){
   switch (ev[0]) {
     case 'sfx': au.sfx(ev[1]); break;
-    case 'music': au.music(ev[1]); break;
+    case 'music': { const mc = myClub(); if (/^(battle|boss)/.test(ev[1]) && KF.ANTHEMS[mc]) au.anthem(mc, .8); else au.music(ev[1]); break; }
     case 'jingle': au.jingle(ev[1]); break;
     case 'banner': UI.banner(ev[1], ev[2]); break;
     case 'go': UI.setGo(!!ev[1]); break;

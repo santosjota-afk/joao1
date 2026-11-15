@@ -8,7 +8,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 const V = KF.view = {fx: [], shake: 0, bg: {}, demo: null, ghosts: [], gt: {}, flashA: 0, flashC: '#fff'};
 
-V.stage = (theme, a, b) => { const k = theme === 'dojo' ? theme + '|' + a + '|' + b : theme; return V.bg[k] || (V.bg[k] = art.makeStage(theme, a, b)); };
+V.stage = (theme, a, b) => { const k = theme + '|' + a + '|' + b; return V.bg[k] || (V.bg[k] = art.makeStage(theme, a, b)); };
 V.lookOf = f => f.look || (f.look = {skin: KF.SKINS[f.lk[0]], hair: KF.HAIRS[f.lk[1]], style: KF.STYLES[f.lk[2]]});
 
 function fxAdd(o){ if (V.fx.length < 260) V.fx.push(o); }

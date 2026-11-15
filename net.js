@@ -42,6 +42,7 @@ function handle(m){
       for (const ev of (m.ev || [])) if (N.onevent) N.onevent(ev);
       break;
     }
+    case 'round': N.live = false; if (N.onround) N.onround(m); break;
     case 'end': N.live = false; if (N.onend) N.onend(m); break;
     case 'pong': N.ping = Math.round(performance.now() - m.ts); break;
   }

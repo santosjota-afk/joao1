@@ -288,6 +288,27 @@ function makeStage(theme, ca, cb){
   const H = 270, HZ = 150, rs = 1.6, S = {theme, amb: [], bursts: []};
   const R = mulberry(theme.length * 977 + 11);
 
+    const CA = KF.CLUBS[ca] || KF.CLUBS.fig, CB = KF.CLUBS[cb] || KF.CLUBS.ava;
+    const flagCol = c => (c.a === '#f5f5f5' || c.a === '#ffffff') ? c.b : c.a;
+    S.bann = layer(960, 100, rs, (g, w, h) => {
+      for (let i = 0; i < 12; i++) {
+        const x = 20 + i * 80, fig = i % 2 === 0; g.fillStyle = '#e8d8b0'; g.fillRect(x - 3, 0, 36, 3);
+        g.beginPath(); g.moveTo(x, 3); g.lineTo(x + 30, 3); g.lineTo(x + 30, 70); g.lineTo(x + 15, 80); g.lineTo(x, 70); g.closePath(); g.save(); g.clip();
+        const cc = fig ? CA : CB; g.fillStyle = cc.a; g.fillRect(x, 0, 30, 90); g.fillStyle = cc.b === cc.a ? '#fff' : cc.b; for (let s = 0; s < 30; s += 10) g.fillRect(x + s + 5, 0, 5, 90); g.restore();
+        g.fillStyle = '#f2c200'; g.beginPath(); g.arc(x + 15, 34, 5, 0, TAU); g.fill();
+      }
+    });
+    const mkCrowd = ph => layer(800, 80, rs, (g, w, h) => {
+      const r = mulberry(5); const row = [{y: 64, s: 1}, {y: 48, s: .9}, {y: 33, s: .8}];
+      if (theme === 'dojo') { g.fillStyle = '#1b0f0c'; g.fillRect(0, 0, w, h); }
+      for (const rw of row) for (let x = 6; x < w; x += 15 * rw.s) {
+        const t = r() , jb = Math.sin(ph * PI + x * .3) * 2.2, cl = r() < .5 ? CA : CB, pal = [cl.a, cl.b === cl.a ? '#fff' : cl.b];
+        g.fillStyle = pal[0]; g.fillRect(x - 5 * rw.s, rw.y - 12 * rw.s + jb, 10 * rw.s, 14 * rw.s); g.fillStyle = pal[1]; g.fillRect(x - 1.5 * rw.s, rw.y - 12 * rw.s + jb, 3 * rw.s, 14 * rw.s);
+        g.fillStyle = KF.SKINS[Math.floor(r() * 5)]; g.beginPath(); g.arc(x, rw.y - 17 * rw.s + jb, 4.6 * rw.s, 0, TAU); g.fill();
+        if (r() < .3) { const up = Math.sin(ph * PI + x) * 3; line(g, x + 5 * rw.s, rw.y - 10 * rw.s + jb, x + 8 * rw.s, rw.y - 28 * rw.s + jb + up, 1.2, '#ddd'); g.fillStyle = flagCol(cl); g.fillRect(x + 8 * rw.s, rw.y - 29 * rw.s + jb + up, 10 * rw.s, 6 * rw.s); }
+      }
+    });
+    S.crowdA = mkCrowd(0); S.crowdB = mkCrowd(1);
   if (theme === 'temple') {
     S.far = layer(1000, 150, rs, (g, w, h) => {
       g.fillStyle = '#6a2f58'; g.beginPath(); g.moveTo(0, h);
@@ -374,27 +395,6 @@ function makeStage(theme, ca, cb){
       glow(g, 480, 70, 170, '#c8202c', .35); g.fillStyle = '#d6202c'; g.beginPath(); g.arc(480, 66, 30, 0, TAU); g.fill();
       for (let x = 60; x < w; x += 120) lantern(g, x, 22, 8, '#d83a2a', '#ff8a5a');
     });
-    const CA = KF.CLUBS[ca] || KF.CLUBS.fig, CB = KF.CLUBS[cb] || KF.CLUBS.ava;
-    const flagCol = c => (c.a === '#f5f5f5' || c.a === '#ffffff') ? c.b : c.a;
-    S.bann = layer(960, 100, rs, (g, w, h) => {
-      for (let i = 0; i < 12; i++) {
-        const x = 20 + i * 80, fig = i % 2 === 0; g.fillStyle = '#e8d8b0'; g.fillRect(x - 3, 0, 36, 3);
-        g.beginPath(); g.moveTo(x, 3); g.lineTo(x + 30, 3); g.lineTo(x + 30, 70); g.lineTo(x + 15, 80); g.lineTo(x, 70); g.closePath(); g.save(); g.clip();
-        const cc = fig ? CA : CB; g.fillStyle = cc.a; g.fillRect(x, 0, 30, 90); g.fillStyle = cc.b === cc.a ? '#fff' : cc.b; for (let s = 0; s < 30; s += 10) g.fillRect(x + s + 5, 0, 5, 90); g.restore();
-        g.fillStyle = '#f2c200'; g.beginPath(); g.arc(x + 15, 34, 5, 0, TAU); g.fill();
-      }
-    });
-    const mkCrowd = ph => layer(800, 80, rs, (g, w, h) => {
-      const r = mulberry(5); const row = [{y: 64, s: 1}, {y: 48, s: .9}, {y: 33, s: .8}];
-      g.fillStyle = '#1b0f0c'; g.fillRect(0, 0, w, h);
-      for (const rw of row) for (let x = 6; x < w; x += 15 * rw.s) {
-        const t = r() , jb = Math.sin(ph * PI + x * .3) * 2.2, cl = r() < .5 ? CA : CB, pal = [cl.a, cl.b === cl.a ? '#fff' : cl.b];
-        g.fillStyle = pal[0]; g.fillRect(x - 5 * rw.s, rw.y - 12 * rw.s + jb, 10 * rw.s, 14 * rw.s); g.fillStyle = pal[1]; g.fillRect(x - 1.5 * rw.s, rw.y - 12 * rw.s + jb, 3 * rw.s, 14 * rw.s);
-        g.fillStyle = KF.SKINS[Math.floor(r() * 5)]; g.beginPath(); g.arc(x, rw.y - 17 * rw.s + jb, 4.6 * rw.s, 0, TAU); g.fill();
-        if (r() < .3) { const up = Math.sin(ph * PI + x) * 3; line(g, x + 5 * rw.s, rw.y - 10 * rw.s + jb, x + 8 * rw.s, rw.y - 28 * rw.s + jb + up, 1.2, '#ddd'); g.fillStyle = flagCol(cl); g.fillRect(x + 8 * rw.s, rw.y - 29 * rw.s + jb + up, 10 * rw.s, 6 * rw.s); }
-      }
-    });
-    S.crowdA = mkCrowd(0); S.crowdB = mkCrowd(1);
     S.floorT = layer(256, 120, rs, (g, w, h) => {
       const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#9a7040'); gr.addColorStop(1, '#c79a5c'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
       let y = 0; while (y < h) { const rh = 8 + y * .13; g.strokeStyle = 'rgba(60,30,10,.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); const cw = 70 + y; for (let x = ((y * 13) % cw) * -1; x < w; x += cw) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + rh); g.stroke(); } y += rh; }
@@ -430,6 +430,7 @@ function makeStage(theme, ca, cb){
       tile(g, S.bann, .25, cam, 4, VW);
       tile(g, (Math.floor(t * 3.5) % 2) ? S.crowdA : S.crowdB, .5, cam, HZ - 82, VW);
     }
+    if (th !== 'dojo') { tile(g, S.bann, .25, cam, 2, VW); tile(g, (Math.floor(t * 3.5) % 2) ? S.crowdA : S.crowdB, .5, cam, HZ - 68, VW); }
     /* chão */
     tile(g, S.floorT, 1, cam, HZ, VW);
     if (th === 'dojo') {   // marcações de campo no tatame

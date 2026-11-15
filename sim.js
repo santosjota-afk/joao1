@@ -46,7 +46,7 @@ KF.createGame = function(){
   /* o: {players:[{pid,name}], carry:{score,ki}, mp:bool} */
   G.start = function(si, club, rival, o){
     o = o || {}; const st = KF.STAGES[si];
-    G.pvp = o.pvp || null; G.winner = ''; G.winClub = ''; G.pt = 0;
+    G.pvp = o.pvp || null; G.winPids = []; G.winner = ''; G.winClub = ''; G.pt = 0;
     G.stage = G.pvp ? {id: 0, name: 'ARENA DA ILHA', theme: 'dojo', len: G.VW || 440, waves: [], cap: 0, tokens: 0, allies: 0, music: 'battle3', intro: '', tip: ''} : st;
     G.si = si; G.club = club; G.rival = rival || KF.rivalOf(club); G.mp = !!o.mp; G.state = 'play';
     G.ents = []; G.proj = []; G.items = []; G.players = []; G.queue = []; events = [];
@@ -376,7 +376,7 @@ KF.createGame = function(){
     const al = G.players.filter(p => !p.out && !p.left);
     if (new Set(al.map(p => G.pvp === 'teams' ? p.club : p.pid)).size > 1) return;
     G.state = 'clear'; G.clearT = 0; const w = al[0];
-    G.winner = !w ? '' : G.pvp === 'teams' ? KF.CLUBS[w.club].name : w.name; G.winClub = w ? w.club : '';
+    G.winner = !w ? '' : G.pvp === 'teams' ? KF.CLUBS[w.club].name : w.name; G.winClub = w ? w.club : ''; G.winPids = al.map(p => p.pid);
     E('jingle', 'win'); E('banner', w ? G.winner.toUpperCase() + ' VENCEU!' : 'EMPATE!', 2600);
     for (const p of al) { p.st = 'win'; p.t = 0; }
   }

@@ -4,7 +4,7 @@
 (function(){
 const KF = window.KF = window.KF || {};
 let ctx = null, master, musicG, sfxG, rev, revG, noiseBuf, trk = null;
-let muted = false, anth = null, anthT = 0; const anthBuf = {}, anthLoad = {};
+let muted = false, anth = null, anthT = 0, pendAnth = null; const anthBuf = {}, anthLoad = {};
 try { muted = localStorage.getItem('kfi_mute') === '1'; } catch (e) {}
 
 const SC = {hira: [0, 2, 3, 7, 8], insen: [0, 1, 5, 7, 10], yo: [0, 2, 4, 7, 9], thai: [0, 2, 4, 7, 9]};
@@ -187,7 +187,7 @@ function tick(){
 /* ---------- API ---------- */
 const A = KF.audio = {
   init(){
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    if (ctx) { if (ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} } return; }
     try {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
       ctx = new AC();
@@ -201,7 +201,7 @@ const A = KF.audio = {
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
       A.analyser = ctx.createAnalyser(); A.analyser.fftSize = 512; master.connect(A.analyser);
-      if (pending) { const p = pending; pending = null; A.music(p); }
+      if (pendAnth) { const p = pendAnth; pendAnth = null; A.anthem(p.id, p.vol); } else if (pending) { const p = pending; pending = null; A.music(p); }
     } catch (e) { ctx = null; }
   },
   get ready(){ return !!ctx; },
@@ -215,7 +215,7 @@ const A = KF.audio = {
     try { SFX[name](ctx.currentTime + 0.005, a); } catch (e) {}
   },
   music(name){
-    if (!ctx) { pending = name; return; }
+    if (!ctx) { pending = name; pendAnth = null; return; }
     if (name && name === A.curName && cur) return;
     A.stopMusic(0.35);
     if (name && name.indexOf('club_') === 0 && !TRACKS[name]) TRACKS[name] = clubTrack(name.slice(5));
@@ -227,19 +227,19 @@ const A = KF.audio = {
   },
   stopMusic(fade){
     A.stopAnthem(fade);
-    clearInterval(timer); timer = null; cur = null; A.curName = null; pending = null;
+    clearInterval(timer); timer = null; cur = null; A.curName = null; pending = null; if (!ctx) pendAnth = null;
     if (ctx && trk) {
       const old = trk; trk = null;
       try { old.gain.setTargetAtTime(0, ctx.currentTime, (fade || 0.3) / 3); setTimeout(() => { try { old.disconnect(); } catch (e) {} }, 2500); } catch (e) {}
     }
   },
   /* hino do clube (arquivo mp3); sem arquivo, cai no tema gerado */
-  anthem(id){
-    clearTimeout(anthT);
+  anthem(id, vol){
+    clearTimeout(anthT); vol = vol || 1.2;
+    if (!ctx) { pendAnth = {id, vol}; pending = null; return; }
     anthT = setTimeout(() => {
-      if (!ctx) return;
       if (!(KF.ANTHEMS && KF.ANTHEMS[id])) { A.music('club_' + id); return; }
-      if (anth && anth.id === id) return;
+      if (anth && anth.id === id) { try { anth.g.gain.setTargetAtTime(vol, ctx.currentTime, 0.2); } catch (e) {} return; }
       A.stopMusic(0.25);
       const o = anth = {id, g: null, src: null};
       const play = buf => {
@@ -249,7 +249,7 @@ const A = KF.audio = {
           const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
           const g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(musicG);
           o.src = src; o.g = g; src.start(0);
-          g.gain.setTargetAtTime(1.2, ctx.currentTime, 0.25);
+          g.gain.setTargetAtTime(vol, ctx.currentTime, 0.25);
         } catch (e) { fail(); }
       };
       const fail = () => { if (anth === o) { anth = null; A.music('club_' + id); } };
@@ -281,7 +281,7 @@ const A = KF.audio = {
     setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 6000);
   },
   suspend(){ if (ctx && ctx.state === 'running') ctx.suspend(); },
-  resume(){ if (ctx && ctx.state === 'suspended') ctx.resume(); },
+  resume(){ if (ctx && ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} } },
   level(){      // 0..1 (para testes)
     if (!A.analyser) return 0;
     const d = new Uint8Array(A.analyser.fftSize); A.analyser.getByteTimeDomainData(d);
