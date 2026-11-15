@@ -35,8 +35,9 @@ function handle(m){
     case 'room': N.room = m; if (N.onroom) N.onroom(m); break;
     case 'err': if (N.onerr) N.onerr(m.msg); break;
     case 'err2': if (N.onerr2) N.onerr2(m.msg); break;
-    case 'begin': N.snaps = []; N.objs = {}; N.live = false; if (N.onbegin) N.onbegin(m); break;
+    case 'begin': N.snaps = []; N.objs = {}; N.stat = {}; N.live = false; if (N.onbegin) N.onbegin(m); break;
     case 'snap': {
+      N.stat = N.stat || {}; for (const f of m.s.f) { if (f.k) N.stat[f.i] = f; else { const t = N.stat[f.i]; if (t) for (const k of ['k', 'c', 's', 'lk', 'sc', 'nm', 'mx', 'al']) f[k] = t[k]; } }
       N.snaps.push({rt: performance.now(), s: m.s}); if (N.snaps.length > 6) N.snaps.shift();
       if (!N.live) { N.live = true; if (N.onlive) N.onlive(m.s); }
       for (const ev of (m.ev || [])) if (N.onevent) N.onevent(ev);

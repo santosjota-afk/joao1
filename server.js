@@ -58,6 +58,21 @@ const clients = new Set(), rooms = new Map();
 let nextPid = 1;
 const send = (c, m) => { if (c.ws.readyState === 1) c.ws.send(JSON.stringify(m)); };
 const toRoom = (r, m) => { const s = JSON.stringify(m); for (const c of r.players.values()) if (c.ws.readyState === 1) c.ws.send(s); };
+/* snapshot enxuto: campos estáticos dos lutadores só na 1ª vez; pula quadros de quem está com a rede engasgada */
+const STATIC = ['k', 'c', 's', 'lk', 'sc', 'nm', 'mx', 'al'];
+function sendSnap(r, s, ev){
+  r.known = r.known || new Set(); s.t = Math.round(s.t * 100) / 100;
+  const full = s.f; let fresh = false;
+  s.f = full.map(f => { if (!r.known.has(f.i)) { r.known.add(f.i); fresh = true; return f; } const o = Object.assign({}, f); for (const k of STATIC) delete o[k]; return o; });
+  const slim = JSON.stringify({t: 'snap', s, ev}); let fullStr = null;
+  const getFull = () => fullStr || (fullStr = JSON.stringify({t: 'snap', s: Object.assign({}, s, {f: full}), ev}));
+  for (const c of r.players.values()) {
+    if (c.ws.readyState !== 1) continue;
+    if (c.ws.bufferedAmount > 12000) { c.need = true; if (ev.length) c.pe = (c.pe || []).concat(ev).slice(-40); continue; }
+    if (c.need || c.pe) { c.ws.send(JSON.stringify({t: 'snap', s: Object.assign({}, s, {f: full}), ev: (c.pe || []).concat(ev)})); c.pe = null; c.need = false; }
+    else c.ws.send(slim);
+  }
+}
 function pushBoard(){ const m = {t: 'board', rows: boardRows()}; for (const c of clients) send(c, m); }
 const clean = n => (String(n || '').replace(/[^\p{L}\p{N} _-]/gu, '').trim().slice(0, 12)) || 'Mestre';
 const CH = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -79,7 +94,7 @@ function leave(c){
 }
 
 function beginStage(r, si, carry){
-  r.phase = 'play'; r.si = si; r.tick = 0;
+  r.phase = 'play'; r.si = si; r.tick = 0; r.known = new Set();
   r.sim.VW = 440; r.hold = 3.5;
   r.sim.start(si, r.club, r.rival, {mp: true, carry, pvp: r.mode === 'coop' ? null : r.mode, players: [...r.players.values()].map(c => ({pid: c.pid, name: c.name, sc: c.sc, lk: c.lk, club: c.club}))});
   r.rep = {}; r.reported = carry ? carry.score : 0;
@@ -134,7 +149,7 @@ setInterval(() => {
       r.sim.update(TICK); r.tick++;
       if (r.tick % 2 === 0) {
         const evs = r.sim.drain(); const ph = r.phase;
-        toRoom(r, {t: 'snap', s: r.sim.snapshot(), ev: evs});
+        sendSnap(r, r.sim.snapshot(), evs);
         if (ph === 'play') handleEvents(r, evs);
       }
     }
@@ -145,7 +160,7 @@ setInterval(() => {
 const wss = new WebSocketServer({server, maxPayload: 2048});
 wss.on('connection', ws => {
   const c = {ws, pid: nextPid++, name: 'Mestre', room: null, bucket: 100, bt: Date.now(), alive: true};
-  clients.add(c);
+  clients.add(c); try { ws._socket.setNoDelay(true); } catch (e) {}
   send(c, {t: 'hi', pid: c.pid}); send(c, {t: 'board', rows: boardRows()});
   ws.on('pong', () => { c.alive = true; });
   ws.on('message', raw => {
