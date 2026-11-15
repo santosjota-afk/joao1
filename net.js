@@ -47,7 +47,7 @@ function handle(m){
     case 'pong': N.ping = Math.round(performance.now() - m.ts); break;
   }
 }
-setInterval(() => { if (N.ws && N.ws.readyState === 1) N.send({t: 'ping', ts: performance.now()}); }, 4000);
+setInterval(() => { if (N.ws && N.ws.readyState === 1) N.send({t: 'ping', ts: performance.now()}); }, 2000);
 
 /* estado interpolado (85 ms atrás) no mesmo formato que a visão espera */
 N.state = function(){

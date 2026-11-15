@@ -395,3 +395,13 @@ KF.debug = {save: () => save, G, view, startSolo: (si, c, r) => { club = c || 'f
 titleScreen();
 requestAnimationFrame(frame);
 })();
+
+/* medidor de ping sempre visível quando conectado online */
+(function(){ const N = KF.net;
+  const d = document.createElement('div'); d.id = 'pingBadge'; document.body.appendChild(d);
+  setInterval(() => {
+    if (!N.ws || N.ws.readyState !== 1 || typeof N.ping !== 'number') { d.style.display = 'none'; return; }
+    const p = N.ping; d.style.display = 'block'; d.textContent = p ? '📶 ' + p + ' ms' : '📶 ...';
+    d.style.color = p < 90 ? '#8ff58f' : p < 170 ? '#ffd23a' : '#ff6a4a';
+  }, 500);
+})();
