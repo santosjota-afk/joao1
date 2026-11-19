@@ -68,7 +68,7 @@ N.state = function(){
     const el = Math.max(0, (now - b.rt) / 1000);
     o.id = f.i; o.kind = f.k; o.club = f.c; o.side = f.s ? 'good' : 'bad'; o.x = lerp(p.x, f.x, q); o.y = lerp(p.y, f.y, q); o.z = lerp(p.z, f.z, q);
     o.face = f.fc; o.st = f.st; o.t = f.t + Math.min(.2, el); o.walkT = f.w + Math.min(.2, el); o.hp = f.hp; o.max = f.mx; o.flash = f.fl ? 1 : 0; o.inv = f.iv ? 1 : 0;
-    o.dead = !!f.d; o.fade = f.fd; o.bar = f.b ? 1 : 0; o.pid = f.p; o.n = f.n; o.atk = f.ak ? KF.ATK[f.ak] : null; o.vz = f.vz; o.ally = !!f.al; o.name = f.nm; o.sc = f.sc | 0; o.ak = f.ak || '';
+    o.dead = !!f.d; o.fade = f.fd; o.bar = f.b ? 1 : 0; o.pid = f.p; o.n = f.n; o.atk = f.ak ? KF.ATK[f.ak] : null; o.vz = f.vz; o.ally = !!f.al; o.name = f.nm; o.sc = f.sc | 0; o.ak = f.ak || ''; o.wp = f.wp || '';
     o.scale = K.scale || 1; o.wide = K.wide || 1;
     if (!o.lk || o.lk[0] !== f.lk[0] || o.lk[1] !== f.lk[1] || o.lk[2] !== f.lk[2]) { o.lk = f.lk; o.look = null; }
     ents.push(o);

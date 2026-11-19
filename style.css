@@ -296,3 +296,6 @@ button.cname{border-color:var(--gold)}
 .pfin .c1 .bar{height:clamp(70px,24vh,120px);background:linear-gradient(#ffe27a,#c9921a);box-shadow:0 0 28px rgba(255,210,58,.7)}
 .pfin .c2 .bar{height:clamp(50px,17vh,86px);background:linear-gradient(#eef2fb,#9aa4ba)}
 .pfin .c3 .bar{height:clamp(36px,12vh,60px);background:linear-gradient(#f0a868,#a85a22)}
+#hWp{display:none;position:absolute;left:max(12px,var(--sa-l));top:calc(var(--sa-t,0px) + 62px);padding:3px 10px;border-radius:10px;background:rgba(0,0,0,.6);border:2px solid #ffd23a;font:900 11px var(--disp);color:#ffd23a;text-shadow:0 1px 0 #000;animation:kiPulse .7s infinite alternate}
+
+.startrow{position:sticky;bottom:-8px;background:linear-gradient(transparent,#120809 30%);padding:8px 0 4px;z-index:3}

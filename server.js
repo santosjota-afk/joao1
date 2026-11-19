@@ -176,7 +176,7 @@ wss.on('connection', ws => {
         const club = KF.CLUBS[m.club] && m.club !== 'ref' ? m.club : 'fig';
         const rv = KF.CLUBS[club].rivals; const rival = KF.CLUBS[m.rival] && m.rival !== 'ref' && m.rival !== club ? m.rival : (rv[0] !== club ? rv[0] : KF.CLUB_LIST.find(x => x.id !== club).id); c.club = club;
         const code = newCode(); if (!code) return send(c, {t: 'err', msg: 'Servidor cheio, tente de novo.'});
-        const room = {code, mode: 'coop', rounds: 3, club, rival, host: c.pid, phase: 'lobby', players: new Map(), sim: KF.createGame(), si: 0, tick: 0, reported: 0};
+        const room = {code, mode: 'ffa', rounds: 3, club, rival, host: c.pid, phase: 'lobby', players: new Map(), sim: KF.createGame(), si: 0, tick: 0, reported: 0};
         rooms.set(code, room); room.players.set(c.pid, c); c.room = room; sendInfo(room); break;
       }
       case 'join': {
@@ -190,9 +190,9 @@ wss.on('connection', ws => {
         room.players.set(c.pid, c); c.room = room; sendInfo(room); break;
       }
       case 'rounds': if (r && r.phase === 'lobby' && r.host === c.pid && [1, 3, 5, 7, 10].includes(m.n)) { r.rounds = m.n; sendInfo(r); } break;
-      case 'mode': if (r && r.phase === 'lobby' && r.host === c.pid && ['coop', 'teams', 'ffa'].includes(m.m)) { r.mode = m.m; sendInfo(r); } break;
+      case 'mode': if (r && r.phase === 'lobby' && r.host === c.pid && ['teams', 'ffa'].includes(m.m)) { r.mode = m.m; sendInfo(r); } break;
       case 'start': if (r && r.phase === 'lobby' && r.host === c.pid) {
-        if (r.mode !== 'coop') {
+        {
           const ps = [...r.players.values()];
           if (ps.length < 2) return send(c, {t: 'err2', msg: 'Precisa de pelo menos 2 jogadores para brigar.'});
           if (r.mode === 'teams' && new Set(ps.map(x => x.club)).size < 2) return send(c, {t: 'err2', msg: 'No Time × Time precisa de pelo menos 2 clubes diferentes na sala.'});

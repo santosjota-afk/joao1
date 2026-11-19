@@ -216,17 +216,17 @@ function lobbyScreen(m){
   const host = m.host === N.me; let slots = '';
   for (let i = 0; i < m.max; i++) { const p = m.players[i]; slots += '<div class="slot' + (p ? ' on' : '') + '">' + (p ? '<b>' + esc(p.name) + '</b>' + '<br><small class="sk"><i class="sw" style="background:' + swatch(p.club || m.club) + '"></i>' + esc(KF.CLUBS[p.club || m.club].name) + ' · ' + esc(schoolOf(p.sc).name) + '</small>' + (p.pid === m.host ? ' <small>host</small>' : '') + (p.pid === N.me ? ' <small>você</small>' : '') : '<span>vazio</span>') + '</div>'; }
   let sb = ''; for (let i = 0; i < KF.STAGES.length; i++) sb += '<button class="btn sm' + (i === lobbySi ? '' : ' alt') + '" data-act="lsi" data-si="' + i + '">' + (i + 1) + '. ' + esc(KF.STAGES[i].name) + '</button>';
-  const MODES = [['coop', '🤝 COOPERATIVO', 'Todos juntos contra os torcedores'], ['teams', '⚔ TIME × TIME', 'Cada clube é um time; os times se enfrentam'], ['ffa', '🥊 TODOS × TODOS', 'Cada um por si: o último em pé vence']];
+  const MODES = [['teams', '⚔ TIME × TIME', 'Cada clube é um time; os times se enfrentam'], ['ffa', '🥊 TODOS × TODOS', 'Cada um por si: o último em pé vence']];
   const RN = [1, 3, 5, 7, 10], rn = m.rounds || 3;
-  const md = MODES.find(x => x[0] === (m.mode || 'coop')) || MODES[0];
+  const md = MODES.find(x => x[0] === (m.mode || 'ffa')) || MODES[1];
   const modeRow = host ? '<div class="stages">' + MODES.map(x => '<button class="btn sm' + (x[0] === md[0] ? '' : ' alt') + '" data-act="lmode" data-m="' + x[0] + '">' + x[1] + '</button>').join('') + '</div><p class="hint" style="animation:none">' + md[2] + '</p>'
     : '<p class="hint" style="animation:none">Modo: <b>' + md[1] + '</b> — ' + md[2] + '</p>';
-  const roundRow = md[0] === 'coop' ? '' : (host ? '<p class="hint" style="animation:none;margin:6px 0 2px">Quantos rounds?</p><div class="stages">' + RN.map(n => '<button class="btn sm' + (n === rn ? '' : ' alt') + '" data-act="lrounds" data-n="' + n + '">' + n + '</button>').join('') + '</div>' : '<p class="hint" style="animation:none">Rounds: <b>' + rn + '</b></p>');
-  if (md[0] !== 'coop') sb = '';
+  const roundRow = (host ? '<p class="hint" style="animation:none;margin:6px 0 2px">Quantos rounds?</p><div class="stages">' + RN.map(n => '<button class="btn sm' + (n === rn ? '' : ' alt') + '" data-act="lrounds" data-n="' + n + '">' + n + '</button>').join('') + '</div>' : '<p class="hint" style="animation:none">Rounds: <b>' + rn + '</b></p>');
+  sb = '';
   club = m.club; rival = m.rival;
-  show('<div class="card wide"><h3>CÓDIGO DA SALA</h3><div class="roomcode">' + esc(m.code) + '</div><p class="vs">' + clubTag(m.club) + ' <b>×</b> ' + clubTag(m.rival) + '</p>' +
+  show('<div class="card wide"><h3>CÓDIGO DA SALA</h3><div class="roomcode">' + esc(m.code) + '</div>' +
     '<div class="slots">' + slots + '</div>' + modeRow + roundRow +
-    (host ? '<div class="stages">' + sb + '</div><div class="row"><button class="btn big" data-act="lstart">⚔ COMEÇAR (' + m.players.length + ')</button></div><p id="lMsg" class="hint" style="animation:none;min-height:16px"></p>' : '<p class="hint" style="animation:none">Aguardando o host começar...</p>') +
+    (host ? '<div class="stages">' + sb + '</div><div class="row startrow"><button class="btn big" data-act="lstart">⚔ COMEÇAR (' + m.players.length + ')</button></div><p id="lMsg" class="hint" style="animation:none;min-height:16px"></p>' : '<p class="hint" style="animation:none">Aguardando o host começar...</p>') +
     '<div class="row"><button class="btn alt" data-act="lpick">🥋 MEU TIME / LUTADOR</button><button class="btn alt" data-act="oleave">SAIR DA SALA</button></div></div>', 'solid');
 }
 N.onroom = m => { if (UI.mode === 'online' || resultPending) return; lobbyScreen(m); };
@@ -421,6 +421,8 @@ function hud(S, pl, score){
   const bb = $('bossbar'), bv = boss ? Math.round(boss.hp / boss.max * 100) : -1;
   if (lastHud.boss !== bv) { lastHud.boss = bv; bb.classList.toggle('hidden', !boss); if (boss) $('hBoss').style.width = bv + '%'; }
   if (S.online) {
+    if (!$('hWp')) { const d = document.createElement('div'); d.id = 'hWp'; $('hud').appendChild(d); }
+    { const we = $('hWp'), k = me.wp ? me.wp + me.wt : ''; if (lastHud.wp !== k) { lastHud.wp = k; const NM = {katana: '🗡 KATANA', nunchaku: '🥢 NUNCHAKU', bo: '🏑 BÔ', shuriken: '✦ SHURIKEN'}; we.textContent = k ? NM[me.wp] + ' · ' + me.wt + 's' : ''; we.style.display = k ? 'block' : 'none'; } }
     if (!$('hPing')) { const d = document.createElement('div'); d.id = 'hPing'; $('hud').appendChild(d); }
     if (N.ping !== lastHud.pg) { lastHud.pg = N.ping; const pe = $('hPing'); pe.textContent = N.ping + ' ms'; pe.style.color = N.ping < 90 ? '#8ff58f' : N.ping < 170 ? '#ffd23a' : '#ff6a4a'; }
     const mm = S.ents.find(e => e.pid === S.me); if (mm && lastHud.cl !== mm.club) { lastHud.cl = mm.club; setT('hName', KF.CLUBS[mm.club].name.toUpperCase()); }

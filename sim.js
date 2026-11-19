@@ -46,7 +46,7 @@ KF.createGame = function(){
   /* o: {players:[{pid,name}], carry:{score,ki}, mp:bool} */
   G.start = function(si, club, rival, o){
     o = o || {}; const st = KF.STAGES[si];
-    G.pvp = o.pvp || null; G.winPids = []; G.winner = ''; G.winClub = ''; G.pt = 0;
+    G.pvp = o.pvp || null; G.pt = 0; G.pn = 2.2; G.winPids = []; G.winner = ''; G.winClub = ''; G.pt = 0;
     G.stage = G.pvp ? {id: 0, name: 'ARENA DA ILHA', theme: 'dojo', len: G.VW || 440, waves: [], cap: 0, tokens: 0, allies: 0, music: 'battle3', intro: '', tip: ''} : st;
     G.si = si; G.club = club; G.rival = rival || KF.rivalOf(club); G.mp = !!o.mp; G.state = 'play';
     G.ents = []; G.proj = []; G.items = []; G.players = []; G.queue = []; events = [];
@@ -81,12 +81,21 @@ KF.createGame = function(){
   /* ---------- ataques ---------- */
   const fxCol = f => f.isPlayer && f.sc ? f.sc.col : ((KF.CLUBS[f.club] || {}).glow || '#fff');
   function slashFx(f, a){
-    E('slash', Math.round(f.x), Math.round(f.y - f.z), f.face, f.atkKey || '', fxCol(f), f.isPlayer && f.sc ? KF.SCHOOLS.indexOf(f.sc) : -1, f.isPlayer ? 1 : 0, a.rng | 0);
+    const W = f.wp ? WP[f.wp] : null;
+    E('slash', Math.round(f.x), Math.round(f.y - f.z), f.face, f.atkKey || '', W ? W.col : fxCol(f), f.isPlayer && f.sc ? KF.SCHOOLS.indexOf(f.sc) : -1, f.isPlayer ? 1 : 0, (a.rng * (W ? W.rg : 1)) | 0);
+  }
+  function throwShu(f){
+    let T = null, bd = 1e9;
+    for (const t of G.ents) if (isFoe(f, t) && !t.dead && (t.x - f.x) * f.face > 0) { const d = Math.abs(t.x - f.x) + Math.abs(t.y - f.y) * 2; if (d < bd) { bd = d; T = t; } }
+    let vy = 0; if (T) { const d = Math.max(30, Math.abs(T.x - f.x)); vy = clamp((T.y - f.y) / d * 320, -90, 90); }
+    G.proj.push({type: 'shu', x: f.x + f.face * 16, y: f.y, z: 26, vx: f.face * 320, vy, side: 'good', pv: 1, ownerPid: f.pid, oc: f.club, life: 1.4, spin: 0, dmg: 11, deflected: false});
+    E('sfx', 'card'); f.wpN = (f.wpN || 1) - 1; if (f.wpN <= 0) { f.wp = ''; popText(f.x, f.y - 70, 'SEM SHURIKEN', '#9be7ff', 11); }
   }
   function startAtk(f, key){
     const a = KF.ATK[key];
     f.atk = a; f.atkKey = key; f.st = 'atk'; f.t = 0; f.didHit = false; f.hitSet = new Set(); f.queue = false; f.n++; f.mt = 0;
     if (a.air) f.vz = Math.max(f.vz, 40);
+    if (f.wp === 'shuriken' && f.isPlayer && (key === 'p1' || key === 'p2' || key === 'p3')) throwShu(f);
     else if (a.lunge) f.vx = f.face * a.lunge;
     if (a.inv) f.inv = a.su + a.ac + .05;
     if (a.dashV) f.dashY = f.tgt ? f.tgt.y : f.y;
@@ -128,13 +137,13 @@ KF.createGame = function(){
   }
   function strike(f, a){
     if (G.pvp && G.state !== 'play') return;
-    let nh = 0;
+    let nh = 0; const WW = f.wp ? WP[f.wp] : null, rgm = WW ? WW.rg : 1, aR = a.rng * rgm;
     for (const t of G.ents) {
       if (!isFoe(f, t) || t.dead || t.st === 'down' || t.st === 'getup' || f.hitSet.has(t)) continue;
       const dx = t.x - f.x;
-      const inX = a.around ? Math.abs(dx) <= a.rng + 6 * t.scale : (dx * f.face >= -8 && dx * f.face <= a.rng + 7 * t.scale);
+      const inX = a.around ? Math.abs(dx) <= aR + 6 * t.scale : (dx * f.face >= -8 && dx * f.face <= aR + 7 * t.scale);
       if (!inX || Math.abs(t.y - f.y) > a.dy || Math.abs(t.z - f.z) > 38) continue;
-      f.hitSet.add(t); nh++; damage(t, Math.round(a.dmg * (f.K.dm || 1) * schoolMul(f, f.atkKey) * (G.pvp ? .7 : 1)), f, a);
+      f.hitSet.add(t); nh++; damage(t, Math.round(a.dmg * (f.K.dm || 1) * schoolMul(f, f.atkKey) * (G.pvp ? .7 : 1) * (WW ? WW.dm : 1)), f, a);
     }
     if (nh >= 3 && f.isPlayer) bonus(f, nh * 40, 'MULTI ×' + nh + '!', '#7fe0ff');
     if (f.side === 'good') for (const p of G.proj) {      // devolver bolas e cartões
@@ -149,6 +158,7 @@ KF.createGame = function(){
     }
   }
 
+  const WP = {katana: {dm: 1.7, rg: 1.25, name: 'KATANA', col: '#dfe9ff', t: 14}, nunchaku: {dm: 1.35, rg: 1.1, name: 'NUNCHAKU', col: '#ffb347', t: 14}, bo: {dm: 1.3, rg: 1.55, name: 'BÔ', col: '#e8c97a', t: 14}, shuriken: {dm: 1, rg: 1, name: 'SHURIKEN', col: '#9be7ff', t: 18, n: 8}};
   /* bônus de pontos com aviso na tela */
   function bonus(p, pts, txt, col, x, y){
     if (!p) return; p.pts += pts; G.score += pts; p.bon = (p.bon || 0) + pts;
@@ -378,6 +388,7 @@ KF.createGame = function(){
   }
 
   function playerDied(p){
+    p.wp = '';
     if (p.lives > 1) {
       p.lives--; p.hp = p.max; p.dead = false; p.st = 'getup'; p.t = 0; p.inv = 2.4; p.x = G.pvp ? G.cam + rand(50, G.VW - 50) : G.cam + 60; p.y = rand(200, 235); p.z = 0; p.vx = 0; p.ki = Math.max(p.ki, 30); p.landed = false;
       E('banner', (G.mp ? p.name + ' voltou!' : 'VOCÊ VOLTOU!') + ' (' + p.lives + ' vidas)', 1300); E('sfx', 'pickup');
@@ -450,7 +461,14 @@ KF.createGame = function(){
     }
     if (G.hitstop > 0) { G.hitstop -= dt; return; }
     G.shake = Math.max(0, G.shake - 22 * dt);
-    if (G.state === 'play' && G.pvp) { G.pt += dt; if (G.pt > 11 && G.items.length < 2) { G.pt = 0; G.items.push({type: 'pastel', x: G.cam + rand(60, G.VW - 60), y: rand(200, 240)}); } }
+    if (G.state === 'play' && G.pvp) {
+      G.pt += dt;
+      if (G.pt > G.pn) {
+        G.pt = 0; G.pn = 3 + Math.random() * 3.5;
+        if (G.items.filter(i => !i.got).length < 4) { const ty = pick(['katana', 'nunchaku', 'bo', 'shuriken', 'shuriken', 'katana', 'pastel']); G.items.push({type: ty, x: G.cam + rand(50, G.VW - 50), y: rand(200, 244), z: 250, vz: 0}); }
+      }
+      for (const p of G.players) if (p.wp) { p.wpT -= dt; if (p.wpT <= 0) { p.wp = ''; popText(p.x, p.y - 70, 'ARMA SUMIU', '#bbb', 11); } }
+    }
     if (G.state === 'play' && !G.pvp) {
       const lim = G.wi < G.stage.waves.length ? wAt(G.wi) : G.stage.len - G.VW;
       if (!G.waveActive && G.wi < G.stage.waves.length && G.cam >= lim - 1 && G.t > 1.6) startWave();
@@ -488,7 +506,8 @@ KF.createGame = function(){
       p.x += p.vx * dt; p.y += p.vy * dt; p.spin += dt * 16 * sgn(p.vx); p.life -= dt;
       if (p.x < G.cam - 120 || p.x > G.cam + G.VW + 120) p.life = 0;
       for (const t of G.ents) {
-        if (t.side === p.side || t.dead || t.st === 'down' || t.st === 'getup' || t.inv > 0) continue;
+        if (t.dead || t.st === 'down' || t.st === 'getup' || t.inv > 0) continue;
+        if (p.pv) { if (!t.isPlayer || t.pid === p.ownerPid || (G.pvp === 'teams' && t.club === p.oc)) continue; } else if (t.side === p.side) continue;
         if (Math.abs(t.x - p.x) < 11 * t.scale && Math.abs(t.y - p.y) < 12 && p.z >= t.z - 6 && p.z <= t.z + 48 * t.scale) {
           const src = {x: p.x - sgn(p.vx), face: sgn(p.vx), pid: p.ownerPid, K: {dm: 1}};
           damage(t, Math.round(p.dmg), src, {dmg: p.dmg, kb: 90, stun: .3, down: p.type === 'red' || p.deflected});
@@ -498,12 +517,20 @@ KF.createGame = function(){
     }
     G.proj = G.proj.filter(p => p.life > 0);
   }
-  function updateItems(){
-    for (const it of G.items) for (const P of G.players) {
-      if (it.got || P.out || P.dead) continue;
-      if (Math.abs(P.x - it.x) < 18 && Math.abs(P.y - it.y) < 14 && P.z < 20) {
-        it.got = true; const h = Math.min(P.max - P.hp, 38); P.hp += h; P.ki = Math.min(100, P.ki + 15); E('sfx', 'pickup');
-        popText(it.x, it.y - 24, h > 0 ? '+' + Math.round(h) + ' VIDA' : 'DELÍCIA!', '#7dff8a', 12); G.score += 25; P.pts += 25;
+  function updateItems(dt){
+    for (const it of G.items) {
+      if (it.z > 0) {
+        it.vz = (it.vz || 0) + 560 * dt; it.z -= it.vz * dt;
+        if (it.z <= 0) { it.z = 0; E('dust', Math.round(it.x), Math.round(it.y), 8); E('ring', Math.round(it.x), Math.round(it.y), '#ffd23a', 90, .4); E('shake', 2.5); E('sfx', 'heavy'); }
+        continue;
+      }
+      for (const P of G.players) {
+        if (it.got || P.out || P.dead) continue;
+        if (Math.abs(P.x - it.x) < 18 && Math.abs(P.y - it.y) < 14 && P.z < 20) {
+          it.got = true; E('sfx', 'pickup');
+          if (WP[it.type]) { const W = WP[it.type]; P.wp = it.type; P.wpT = W.t; P.wpN = W.n || 0; popText(it.x, it.y - 30, W.name + '!', W.col, 15); E('burst', Math.round(it.x), Math.round(it.y - 14), 1, 1, W.col); G.score += 10; P.pts += 10; }
+          else { const h = Math.min(P.max - P.hp, 38); P.hp += h; P.ki = Math.min(100, P.ki + 15); popText(it.x, it.y - 24, h > 0 ? '+' + Math.round(h) + ' VIDA' : 'DELÍCIA!', '#7dff8a', 12); G.score += 25; P.pts += 25; }
+        }
       }
     }
     G.items = G.items.filter(i => !i.got);
@@ -528,15 +555,15 @@ KF.createGame = function(){
     p.left = true; p.out = true; p.remove = true; p.dead = true;
     if (G.state === 'play') { if (G.pvp) pvpCheck(); else if (G.players.every(q => q.out)) { G.state = 'over'; G.clearT = 0; E('jingle', 'lose'); } }
   };
-  G.info = () => G.players.filter(p => !p.left).map(p => ({pid: p.pid, name: p.name, hp: Math.round(p.hp), max: p.max, ki: Math.round(p.ki), lives: p.lives, out: p.out, pts: p.pts, combo: p.combo, cl: p.club}));
+  G.info = () => G.players.filter(p => !p.left).map(p => ({pid: p.pid, name: p.name, hp: Math.round(p.hp), max: p.max, ki: Math.round(p.ki), lives: p.lives, out: p.out, pts: p.pts, combo: p.combo, cl: p.club, wp: p.wp || '', wt: Math.ceil(p.wpT || 0)}));
   const r1 = v => Math.round(v * 10) / 10;
   G.snapshot = function(){
     return {
       t: G.t, cam: r1(G.cam), si: G.si, wi: G.wi, st: G.state, go: G.go ? 1 : 0, sc: G.score, kos: G.kos, mc: G.maxCombo, club: G.club, rival: G.rival, pv: G.pvp === 'teams' ? 2 : G.pvp === 'ffa' ? 1 : 0, win: G.winner, wc: G.winClub,
       f: G.ents.map(f => ({i: f.id, k: f.kind, c: f.club, s: f.side === 'good' ? 1 : 0, x: r1(f.x), y: r1(f.y), z: r1(f.z), fc: f.face, st: f.st, t: Math.round(f.t * 100) / 100, w: Math.round(f.walkT * 100) / 100,
-        hp: Math.round(f.hp), mx: f.max, fl: f.flash > 0 ? 1 : 0, iv: f.inv > 0 ? 1 : 0, d: f.dead ? 1 : 0, fd: Math.round(f.fade * 100) / 100, b: f.bar > 0 ? 1 : 0, p: f.pid != null ? f.pid : 0, n: f.n, ak: f.atkKey, lk: f.lk, sc: f.scI || 0, vz: Math.round(f.vz), al: f.ally ? 1 : 0, nm: f.name})),
+        hp: Math.round(f.hp), mx: f.max, fl: f.flash > 0 ? 1 : 0, iv: f.inv > 0 ? 1 : 0, d: f.dead ? 1 : 0, fd: Math.round(f.fade * 100) / 100, b: f.bar > 0 ? 1 : 0, p: f.pid != null ? f.pid : 0, n: f.n, ak: f.atkKey, lk: f.lk, sc: f.scI || 0, vz: Math.round(f.vz), al: f.ally ? 1 : 0, nm: f.name, wp: f.wp || ''})),
       pr: G.proj.map(p => ({t: p.type, x: r1(p.x), y: r1(p.y), z: p.z, sp: r1(p.spin), s: p.side === 'good' ? 1 : 0, df: p.deflected ? 1 : 0})),
-      it: G.items.map(i => ({x: r1(i.x), y: r1(i.y)})),
+      it: G.items.map(i => ({type: i.type, x: r1(i.x), y: r1(i.y), z: r1(i.z || 0)})),
       pl: G.info()
     };
   };

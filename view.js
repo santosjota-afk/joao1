@@ -21,11 +21,11 @@ V.event = function(ev){
   else if (k === 'ring') fxAdd({type: 'ring', x: ev[1], y: ev[2], r: 8, col: ev[3], grow: ev[4], max: ev[5], life: ev[5]});
   else if (k === 'shake') V.shake = Math.max(V.shake, ev[1]);
   else if (k === 'slash') fxAdd({type: 'slash', x: ev[1], y: ev[2], face: ev[3], key: ev[4], col: ev[5], sc: ev[6], pl: ev[7], rng: ev[8] || 34, life: ev[4] === 'kick' || ev[4] === 'p3' ? .26 : .2, max: ev[4] === 'kick' || ev[4] === 'p3' ? .26 : .2});
-  else if (k === 'burst') {
+  else if (k === 'burst') { if (ev[4]) V.hype = Math.min(1, (V.hype || 0) + .22);
     const n = ev[4] ? 9 : 5, cols = ['#ffffff', '#fff3a0', ev[5] || '#ffd23a'];
     for (let i = 0; i < n; i++) { const a = (Math.random() - .5) * 2.2, sp = rand(70, ev[4] ? 190 : 140); fxAdd({type: 'bp', x: ev[1], y: ev[2], vx: Math.cos(a) * ev[3] * sp, vy: Math.sin(a) * sp - 30, life: rand(.28, .5), max: .5, col: cols[i % 3], len: rand(3, 7)}); }
   }
-  else if (k === 'special') {
+  else if (k === 'special') { V.hype = 1;
     const sc = ev[3] | 0, col = (KF.SCHOOLS[sc] || {}).col || '#fff';
     fxAdd({type: 'sp' + sc, x: ev[1], y: ev[2], col, life: .95, max: .95}); V.shake = Math.max(V.shake, sc === 2 ? 9 : 5);
     V.flashA = Math.max(V.flashA, .22); V.flashC = col;
@@ -34,6 +34,7 @@ V.event = function(ev){
   else if (k === 'flash') { V.flashC = ev[1] || '#fff'; V.flashA = Math.max(V.flashA, ev[2] || .4); }
 };
 V.update = function(dt){
+  V.hype = Math.max(0, (V.hype || 0) - .28 * dt);
   V.shake = Math.max(0, V.shake - 22 * dt); V.flashA = Math.max(0, V.flashA - 1.6 * dt);
   for (const gh of V.ghosts) gh.life -= dt; V.ghosts = V.ghosts.filter(gh => gh.life > 0);
   for (const f of V.fx) {
@@ -139,7 +140,7 @@ V.render = function(g, S, dt){
   const cam = S.cam, VW = S.VW, T = S.t, me = S.me;
   g.save();
   if (V.shake > .3) g.translate(rand(-V.shake, V.shake) * .6, rand(-V.shake, V.shake) * .6);
-  V.stage(S.theme, S.cA, S.cB).draw(g, cam, VW, T, dt);
+  (V.stage(S.theme, S.cA, S.cB).hype = V.hype || 0, V.stage(S.theme, S.cA, S.cB)).draw(g, cam, VW, T, dt);
   const L = [];
   for (const f of S.ents) {            // imagens residuais em golpes rápidos
     if (dt > 0 && !f.dead) {
@@ -154,6 +155,7 @@ V.render = function(g, S, dt){
   for (const o of L) {
     if (o.f) { if (!(o.f.dead && o.f.fade > .3)) art.drawShadow(g, o.f.x - cam, o.f.y, o.f.z, o.f.scale); }
     else if (o.p) art.drawShadow(g, o.p.x - cam, o.p.y, o.p.z + 10, .5);
+    else if (o.i) art.drawShadow(g, o.i.x - cam, o.i.y, o.i.z || 0, .6);
   }
   L.sort((a, b) => a.y - b.y);
   for (const o of L) {
@@ -178,9 +180,10 @@ V.render = function(g, S, dt){
         g.font = '900 15px "Arial Black",Impact,sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = '#000'; g.fillStyle = (Math.floor(f.t * 20) % 2) ? '#ff2a2a' : '#ffd23a'; g.strokeText('!', sx, top - 2); g.fillText('!', sx, top - 2);
       }
     } else if (o.p) {
-      const p = o.p; if (p.type === 'ball') art.drawBall(g, p.x - cam, p.y - p.z, 6, p.spin); else art.drawCard(g, p.x - cam, p.y - p.z, p.type === 'red', p.spin);
+      const p = o.p; if (p.type === 'shu') art.drawShuriken(g, p.x - cam, p.y - p.z, p.spin); else if (p.type === 'ball') art.drawBall(g, p.x - cam, p.y - p.z, 6, p.spin); else art.drawCard(g, p.x - cam, p.y - p.z, p.type === 'red', p.spin);
       if (p.deflected) { g.strokeStyle = 'rgba(255,230,120,.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x - cam, p.y - p.z, 9, 0, 6.3); g.stroke(); }
-    } else art.drawPastel(g, o.i.x - cam, o.i.y, T);
+    } else if (o.i.type && o.i.type !== 'pastel') art.drawWeaponItem(g, o.i.x - cam, o.i.y, o.i.z || 0, o.i.type, T);
+    else art.drawPastel(g, o.i.x - cam, o.i.y - (o.i.z || 0), T);
   }
   drawFx(g, cam);
   g.restore();
