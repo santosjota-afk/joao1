@@ -285,7 +285,7 @@ function garland(g, x1, x2, y, sag, n, R){
   for (let i = 0; i <= n; i++) { const t = i / n, px = x1 + (x2 - x1) * t, py = y + 2 * t * (1 - t) * sag; g.fillStyle = i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#ff9a1a' : '#ffc21a'; g.beginPath(); g.arc(px, py + 3, 3, 0, TAU); g.fill(); }
 }
 function makeStage(theme, ca, cb){
-  const H = 270, HZ = 150, rs = 1.6, S = {theme, amb: [], bursts: []};
+  const H = 270, HZ = 150, rs = 1.6, S = {theme, amb: [], bursts: [], stands: ca !== 'none'};
   const R = mulberry(theme.length * 977 + 11);
 
     const CA = KF.CLUBS[ca] || KF.CLUBS.fig, CB = KF.CLUBS[cb] || KF.CLUBS.ava;
@@ -430,7 +430,7 @@ function makeStage(theme, ca, cb){
       tile(g, S.bann, .25, cam, 4, VW);
       tile(g, (Math.floor(t * 3.5) % 2) ? S.crowdA : S.crowdB, .5, cam, HZ - 82, VW);
     }
-    if (th !== 'dojo') { tile(g, S.bann, .25, cam, 2, VW); tile(g, (Math.floor(t * 3.5) % 2) ? S.crowdA : S.crowdB, .5, cam, HZ - 68, VW); }
+    if (th !== 'dojo' && S.stands) { tile(g, S.bann, .25, cam, 2, VW); tile(g, (Math.floor(t * 3.5) % 2) ? S.crowdA : S.crowdB, .5, cam, HZ - 68, VW); }
     /* chão */
     tile(g, S.floorT, 1, cam, HZ, VW);
     if (th === 'dojo') {   // marcações de campo no tatame

@@ -51,11 +51,11 @@ KF.createGame = function(){
     G.si = si; G.club = club; G.rival = rival || KF.rivalOf(club); G.mp = !!o.mp; G.state = 'play';
     G.ents = []; G.proj = []; G.items = []; G.players = []; G.queue = []; events = [];
     G.t = 0; G.cam = 0; G.camMin = 0; G.wi = 0; G.waveActive = false; G.go = false; G.clearT = 0; G.reported = false;
-    G.score = o.carry ? o.carry.score : 0; G.kos = 0; G.maxCombo = 0; G.hitstop = 0; G.shake = 0; G.startScore = G.score; G.hitsTaken = 0;
+    G.score = o.carry ? o.carry.score : 0; G.kos = 0; G.maxCombo = 0; G.hitstop = 0; G.shake = 0; G.startScore = G.score; G.hitsTaken = 0; G.t0 = G.t; G.firstBlood = 0;
     const pls = o.players && o.players.length ? o.players : [{pid: 1, name: 'Você'}];
     G.nP = pls.length;
     pls.forEach((pl, i) => { const p = G.addPlayer(pl.pid, pl.name, i, pl.sc, pl.lk, pl.club); if (o.carry && o.carry.ki != null && !G.mp) p.ki = o.carry.ki; });
-    G.player = G.players[0];
+    G.player = G.players[0]; for (const p of G.players) { p.hurt = 0; p.streak = 0; p.bon = 0; }
     if (G.pvp) {
       const ps = G.players, VW = G.VW || 440;
       G.club = ps[0].club; G.rival = (ps.find(p => p.club !== ps[0].club) || {club: G.rival}).club;
@@ -128,13 +128,15 @@ KF.createGame = function(){
   }
   function strike(f, a){
     if (G.pvp && G.state !== 'play') return;
+    let nh = 0;
     for (const t of G.ents) {
       if (!isFoe(f, t) || t.dead || t.st === 'down' || t.st === 'getup' || f.hitSet.has(t)) continue;
       const dx = t.x - f.x;
       const inX = a.around ? Math.abs(dx) <= a.rng + 6 * t.scale : (dx * f.face >= -8 && dx * f.face <= a.rng + 7 * t.scale);
       if (!inX || Math.abs(t.y - f.y) > a.dy || Math.abs(t.z - f.z) > 38) continue;
-      f.hitSet.add(t); damage(t, Math.round(a.dmg * (f.K.dm || 1) * schoolMul(f, f.atkKey) * (G.pvp ? .7 : 1)), f, a);
+      f.hitSet.add(t); nh++; damage(t, Math.round(a.dmg * (f.K.dm || 1) * schoolMul(f, f.atkKey) * (G.pvp ? .7 : 1)), f, a);
     }
+    if (nh >= 3 && f.isPlayer) bonus(f, nh * 40, 'MULTI ×' + nh + '!', '#7fe0ff');
     if (f.side === 'good') for (const p of G.proj) {      // devolver bolas e cartões
       if (p.side === 'good') continue;
       const dx = p.x - f.x;
@@ -147,6 +149,11 @@ KF.createGame = function(){
     }
   }
 
+  /* bônus de pontos com aviso na tela */
+  function bonus(p, pts, txt, col, x, y){
+    if (!p) return; p.pts += pts; G.score += pts; p.bon = (p.bon || 0) + pts;
+    popText(x != null ? x : p.x, y != null ? y : p.y - 70, txt + ' +' + pts, col || '#ffd23a', 13);
+  }
   function damage(t, dmg, src, att){
     if (t.inv > 0 || t.dead) return false;
     t.hp = Math.max(0, t.hp - dmg); t.flash = .09; t.bar = 2.2;
@@ -163,14 +170,22 @@ KF.createGame = function(){
     if (cr) {
       cr.combo++; cr.comboT = 1.7; G.maxCombo = Math.max(G.maxCombo, cr.combo);
       const pts = 10 + Math.min(cr.combo, 20) * 2; G.score += pts; cr.pts += pts;
+      const MS = {5: 40, 10: 100, 15: 180, 25: 400, 40: 800}; if (MS[cr.combo]) { bonus(cr, MS[cr.combo], 'COMBO ×' + cr.combo + '!', '#ff9a3a', cr.x, cr.y - 78); E('sfx', 'gong'); }
       cr.ki = Math.min(100, cr.ki + (heavy ? 9 : 5) * (cr.sc ? cr.sc.kg : 1));
     }
-    if (t.isPlayer) { E('sfx', 'hurt'); E('buzz', t.pid, heavy ? 70 : 30); G.hitsTaken++; t.combo = 0; }
+    if (t.isPlayer) { E('sfx', 'hurt'); E('buzz', t.pid, heavy ? 70 : 30); G.hitsTaken++; t.combo = 0; t.hurt = (t.hurt || 0) + 1; }
     if (!t.isPlayer && t.side === 'bad') { t.tok = false; if (!t.atk) t.cool = Math.max(t.cool, rand(.3, .7)); }
     if (kill) {
       t.dead = true; t.hp = 0; knockdown(t, dir, att.kb * 1.1, 200);
       E('sfx', 'ko');
-      if (G.pvp && cr && t.isPlayer && cr !== t) { cr.pts += 300; G.score += 300; G.kos++; popText(t.x, cy - 26, 'NOCAUTE!', '#ffd23a', 16); }
+      if (cr && src.atkKey === 'jkick') bonus(cr, 60, 'VOADORA!', '#9be7ff', t.x, cy - 40);
+      else if (cr && att.around) bonus(cr, 40, 'ESPECIAL!', '#ffb347', t.x, cy - 40);
+      if (G.pvp && cr && t.isPlayer && cr !== t) {
+        cr.pts += 300; G.score += 300; G.kos++; popText(t.x, cy - 26, 'NOCAUTE!', '#ffd23a', 16);
+        if (!G.firstBlood) { G.firstBlood = 1; bonus(cr, 150, 'PRIMEIRO SANGUE!', '#ff6a6a', t.x, cy - 54); }
+        cr.streak = (cr.streak || 0) + 1; if (cr.streak >= 2) bonus(cr, 100 * (cr.streak - 1), 'SEQUÊNCIA ×' + cr.streak + '!', '#ff9a3a', cr.x, cr.y - 90);
+        t.streak = 0;
+      }
       if (t.side === 'bad') {
         G.kos++; const sc = t.K.score || 100; G.score += sc; if (cr) cr.pts += sc;
         popText(t.x, cy - 26, t.boss ? 'GOOOOL!' : pick(['GOL!', 'GOL!', 'GOLAÇO!']), '#ffd23a', t.boss ? 20 : 15);
@@ -378,6 +393,7 @@ KF.createGame = function(){
     G.state = 'clear'; G.clearT = 0; const w = al[0];
     G.winner = !w ? '' : G.pvp === 'teams' ? KF.CLUBS[w.club].name : w.name; G.winClub = w ? w.club : ''; G.winPids = al.map(p => p.pid);
     E('jingle', 'win'); E('banner', w ? G.winner.toUpperCase() + ' VENCEU!' : 'EMPATE!', 2600);
+    for (const p of al) { bonus(p, 300, 'VENCEDOR!', '#ffd23a', p.x, p.y - 80); if (!p.hurt) bonus(p, 200, 'INTOCÁVEL!', '#7dff8a', p.x, p.y - 96); }
     for (const p of al) { p.st = 'win'; p.t = 0; }
   }
 
@@ -419,6 +435,8 @@ KF.createGame = function(){
   function stageComplete(){
     G.state = 'clear'; G.clearT = 0; G.go = false; E('go', 0);
     E('jingle', 'win'); E('banner', 'FASE COMPLETA!', 2400);
+    const tt = Math.max(0, Math.round((150 - (G.t - (G.t0 || 0))) * 4)), parts = [];
+    for (const p of G.players) { if (p.out || p.left) continue; if (!p.hurt) { bonus(p, 500, 'SEM APANHAR!', '#7dff8a', p.x, p.y - 86); } if (tt > 0) bonus(p, Math.min(600, tt), 'TEMPO', '#9be7ff', p.x, p.y - 100); }
     for (const e of G.ents) if (e.side === 'good' && !e.dead && (e.st === 'idle' || e.st === 'walk')) { e.st = 'win'; e.t = 0; }
   }
 

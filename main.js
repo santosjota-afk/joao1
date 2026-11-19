@@ -51,12 +51,16 @@ function boardHtml(){
 
 function titleScreen(){
   UI.mode = 'title'; UI.paused = false; hideGame(); N.live = false;
+  const nSchools = KF.SCHOOL_IDS ? KF.SCHOOL_IDS.length : 4, nClubs = KF.CLUB_LIST.length;
   show('<div class="title"><div class="seal">島</div><h1 class="logo"><span>' + KF.TITLE[0] + '</span><span>' + KF.TITLE[1] + '</span></h1>' +
-    '<p class="sub">O CLÁSSICO VIROU ARTE MARCIAL — TIMES E RIVAIS</p>' +
-    '<button class="btn big" data-act="play">▶ JOGAR SOZINHO</button>' +
-    '<button class="btn" data-act="online">👥 JOGAR COM A TURMA</button>' +
-    '<div class="row"><button class="btn alt" data-act="how">❓ COMO JOGAR</button><button class="btn alt" data-act="snd">' + sndLabel() + '</button></div>' +
-    (save.best ? '<p class="hint" style="animation:none;opacity:.9">RECORDE: ' + save.best + '</p>' : '<p class="hint">toque para começar</p>') + '</div>', 'clear');
+    '<p class="sub">O CLÁSSICO VIROU ARTE MARCIAL</p>' +
+    '<div class="menu">' +
+      '<button class="mcard solo" data-act="play"><i>拳</i><b>JOGAR SOZINHO</b><small>Enfrente os torcedores</small></button>' +
+      '<button class="mcard crew" data-act="online"><i>群</i><b>JOGAR COM A TURMA</b><small>Salas de até 6 · 6 × 6 · ranking</small></button>' +
+    '</div>' +
+    '<div class="row sm"><button class="btn alt" data-act="how">❓ COMO JOGAR</button><button class="btn alt" data-act="snd">' + sndLabel() + '</button></div>' +
+    '<div class="ticker"><div>★ ' + nClubs + ' CLUBES ★ ' + nSchools + ' ESCOLAS DE LUTA ★ HINO DO SEU TIME ★ MODO TIME × TIME ★ TODOS × TODOS ★ TOP 3 DA TURMA ★ ' + nClubs + ' CLUBES ★ ' + nSchools + ' ESCOLAS DE LUTA ★ HINO DO SEU TIME ★ MODO TIME × TIME ★ TODOS × TODOS ★ TOP 3 DA TURMA</div></div>' +
+    (save.best ? '<p class="hint" style="animation:none;opacity:.9">RECORDE: ' + save.best + '</p>' : '') + '</div>', 'clear');
   au.music('title');
 }
 function howScreen(back){
@@ -230,8 +234,22 @@ function myClub(){ if (UI.mode === 'online' && N.room) { const p = N.room.player
 N.onerr = msg => { onlineMenu(msg); };
 N.onerr2 = msg => { const e = $('lMsg'); if (e) e.textContent = msg; };
 N.onboard = () => { const b = $('boardBox'); if (b) b.innerHTML = boardHtml(); };
+const INTRO_COOP = [['🥋', 'GOLPEOU, PONTUOU', 'Cada golpe vale pontos. Quanto maior o combo, mais cada golpe vale.'], ['🔥', 'COMBOS', '5 golpes seguidos <b>+40</b> · 10 <b>+100</b> · 15 <b>+180</b> · 25 <b>+400</b> · 40 <b>+800</b>'], ['⚽', 'GOLS = NOCAUTES', 'Nocautear torcedor é <b>GOL</b>! Voadora <b>+60</b> · Especial <b>+40</b> · Acertar 3 ou mais de uma vez: <b>MULTI +40 cada</b>'], ['🛡', 'DEFESA E PASTEL', 'Devolva bolas e cartões com um golpe: <b>+50</b>. Pastel de camarão cura a vida e dá <b>+25</b>.'], ['🏆', 'BÔNUS DE FASE', 'Terminar sem apanhar <b>+500</b> · Terminar rápido até <b>+600</b>. Os pontos somam no placar do seu time!']];
+const INTRO_PVP = [['🥋', 'GOLPEOU, PONTUOU', 'Cada golpe vale pontos. Quanto maior o combo, mais cada golpe vale.'], ['🔥', 'COMBOS', '5 golpes seguidos <b>+40</b> · 10 <b>+100</b> · 15 <b>+180</b> · 25 <b>+400</b> · 40 <b>+800</b>'], ['💥', 'NOCAUTES', 'Derrubar um rival: <b>+300</b>. Primeiro nocaute da luta: <b>+150</b>. Sequência sem morrer: <b>+100 × cada</b>'], ['👑', 'VENCEU O ROUND', 'Último de pé: <b>+300</b>. Sem tomar um golpe: <b>+200</b> extra. Pegue os pastéis para curar!'], ['🥇', 'TOP 3 DA SALA', 'Quem vencer mais rounds (e somar mais pontos) sobe ao <b>pódio</b>. Boa luta!']];
+function introHtml(m){
+  const L = m.pv ? INTRO_PVP : INTRO_COOP, n = L.length, per = m.intro / n;
+  return '<div class="card intro"><h3>' + (m.pv ? (m.pv === 'teams' ? 'TIME × TIME' : 'TODOS × TODOS') : 'LUTA EM EQUIPE') + ' — COMO GANHAR PONTOS</h3>' + (m.pv ? '' : '<p class="vs">' + clubTag(m.club) + ' <b>×</b> ' + clubTag(m.rival) + '</p>') +
+    '<div class="slides">' + L.map((s, i) => '<div class="sl' + (i === n - 1 ? ' last' : '') + '" style="animation-duration:' + per + 's;animation-delay:' + (i * per) + 's"><i>' + s[0] + '</i><h2>' + s[1] + '</h2><p>' + s[2] + '</p></div>').join('') + '</div>' +
+    '<div class="ibar"><i style="animation-duration:' + m.intro + 's"></i></div><p class="hint" id="introN" style="animation:none">A luta começa em ' + m.intro + 's</p></div>';
+}
+let introTm = 0;
 N.onbegin = m => {
-  club = m.club; rival = m.rival; UI.mode = 'title'; hideGame(); au.music('title');
+  club = m.club; rival = m.rival; UI.mode = 'title'; hideGame(); au.music('title'); clearInterval(introTm);
+  if (m.intro) {
+    show(introHtml(m), 'solid'); let left = m.intro;
+    introTm = setInterval(() => { left--; const e = $('introN'); if (!e || left < 0) { clearInterval(introTm); return; } e.textContent = left > 0 ? 'A luta começa em ' + left + 's' : 'VALENDO!'; }, 1000);
+    return;
+  }
   show('<div class="card"><h3>PREPARE-SE!</h3><h2>' + esc(m.story.name.toUpperCase()) + '</h2><p class="vs">' + clubTag(m.club) + ' <b>×</b> ' + clubTag(m.rival) + '</p><p>' + m.story.intro + '</p><p class="tip">💡 ' + m.story.tip + '</p></div>', 'solid');
 };
 N.onlive = s => {
@@ -243,12 +261,67 @@ N.onround = m => {
   UI.mode = 'title'; hideGame(); au.music('title');
   show('<div class="card"><h3>ROUND ' + m.round + ' DE ' + m.rounds + '</h3><h2>🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') + '</h2><p>Placar parcial — o próximo round já vai começar...</p>' + rankHtml(m.standings) + '</div>', 'solid');
 };
+/* ---------- PÓDIO: abertura para o top 3 (o 1º é a mais épica) ---------- */
+let podTm = [], podRaf = 0;
+function podiumStop(){ podTm.forEach(clearTimeout); podTm = []; if (podRaf) cancelAnimationFrame(podRaf); podRaf = 0; }
+function podium(list, done){
+  podiumStop(); const top = list.slice(0, 3), MED = [['🥇', '1º LUGAR', '#ffd23a'], ['🥈', '2º LUGAR', '#d5dcec'], ['🥉', '3º LUGAR', '#e08a4a']];
+  show('<div class="podium"><canvas id="pcv"></canvas><div id="pst"></div><button class="btn alt psk" data-act="pskip">PULAR ▶</button></div>', 'solid');
+  const cv = $('pcv'), g = cv.getContext('2d'), pst = $('pst');
+  const W = cv.width = Math.min(960, innerWidth), H = cv.height = Math.min(540, innerHeight); cv.style.width = '100%'; cv.style.height = '100%';
+  const P = [], FW = []; let rayCol = '#ffd23a', rayA = .0, spot = 0, last = performance.now(), flash = 0, boom = 0;
+  const confetti = (n, cols) => { for (let k = 0; k < n; k++) P.push({x: Math.random() * W, y: -10 - Math.random() * H * .5, vx: (Math.random() - .5) * 90, vy: 60 + Math.random() * 150, r: Math.random() * 6, vr: (Math.random() - .5) * 10, w: 5 + Math.random() * 6, h: 3 + Math.random() * 5, c: cols[k % cols.length], life: 6}); };
+  const fw = (x, y, cols, n) => { for (let k = 0; k < (n || 46); k++) { const a = Math.random() * 6.283, s = 50 + Math.random() * 190; FW.push({x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .9 + Math.random() * .7, max: 1.5, c: cols[k % cols.length]}); } };
+  const sparkleAt = (x, y, c) => fw(x, y, [c, '#fff'], 22);
+  const loop = now => {
+    if (!$('pcv')) { podiumStop(); return; }
+    const dt = Math.min(.05, (now - last) / 1000); last = now; boom = Math.max(0, boom - dt * 2);
+    g.clearRect(0, 0, W, H);
+    const bg = g.createRadialGradient(W / 2, H * .55, 10, W / 2, H * .55, W * .7); bg.addColorStop(0, 'rgba(70,16,24,.85)'); bg.addColorStop(1, 'rgba(6,2,4,.97)'); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+    if (rayA > .01) { g.save(); g.translate(W / 2, H * .5); g.rotate(now / 4000); g.globalCompositeOperation = 'lighter'; for (let k = 0; k < 20; k++) { const an = k * Math.PI / 10; g.fillStyle = rayCol; g.globalAlpha = rayA * (k % 2 ? .10 : .05); g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(an) * W, Math.sin(an) * W); g.lineTo(Math.cos(an + .12) * W, Math.sin(an + .12) * W); g.closePath(); g.fill(); } g.restore(); }
+    if (spot > .01) { const sg = g.createRadialGradient(W / 2, H * .5, 10, W / 2, H * .5, H * .62); sg.addColorStop(0, 'rgba(255,240,180,' + spot * .45 + ')'); sg.addColorStop(1, 'rgba(255,240,180,0)'); g.fillStyle = sg; g.fillRect(0, 0, W, H); }
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (let k = FW.length - 1; k >= 0; k--) { const f = FW[k]; f.life -= dt; if (f.life <= 0) { FW.splice(k, 1); continue; } f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 160 * dt; f.vx *= .985; g.globalAlpha = Math.min(1, f.life / f.max * 1.6); g.strokeStyle = f.c; g.lineWidth = 2.2; g.beginPath(); g.moveTo(f.x, f.y); g.lineTo(f.x - f.vx * .04, f.y - f.vy * .04); g.stroke(); }
+    g.restore();
+    for (let k = P.length - 1; k >= 0; k--) { const c = P[k]; c.life -= dt; if (c.life <= 0 || c.y > H + 14) { P.splice(k, 1); continue; } c.x += (c.vx + Math.sin(now / 300 + c.r) * 30) * dt; c.y += c.vy * dt; c.r += c.vr * dt; g.save(); g.translate(c.x, c.y); g.rotate(c.r); g.fillStyle = c.c; g.globalAlpha = Math.min(1, c.life); g.scale(1, Math.abs(Math.sin(c.r * 2)) + .15); g.fillRect(-c.w / 2, -c.h / 2, c.w, c.h); g.restore(); }
+    if (flash > .01) { g.fillStyle = 'rgba(255,255,255,' + flash + ')'; g.fillRect(0, 0, W, H); flash = Math.max(0, flash - dt * 2.2); }
+    pst.style.transform = boom > .01 ? 'translate(' + ((Math.random() - .5) * 12 * boom) + 'px,' + ((Math.random() - .5) * 12 * boom) + 'px)' : '';
+    podRaf = requestAnimationFrame(loop);
+  };
+  podRaf = requestAnimationFrame(loop);
+  const card = (pos) => { const p = top[pos], md = MED[pos]; return '<div class="pcard m' + (pos + 1) + '"><div class="pmed">' + md[0] + '</div><div class="ppl" style="color:' + md[2] + '">' + md[1] + '</div><div class="pname">' + esc(p.name) + '</div><div class="pclub">' + (p.cl ? clubTag(p.cl) : '') + '</div><div class="ppts">' + (p.w != null ? p.w + ' 🏆 · ' : '') + p.pts + ' pts</div></div>'; };
+  const at = (ms, fn) => podTm.push(setTimeout(fn, ms));
+  const finalView = () => {
+    podiumStop(); podRaf = requestAnimationFrame(loop); rayCol = '#ffd23a'; rayA = .7; spot = 0;
+    const order = [1, 0, 2].filter(k => top[k]);
+    pst.innerHTML = '<div class="pfin"><h2>🏆 PÓDIO DA SALA 🏆</h2><div class="cols">' + order.map(k => '<div class="col c' + (k + 1) + '"><div class="who"><span>' + MED[k][0] + '</span><b>' + esc(top[k].name) + '</b><small>' + (top[k].cl && KF.CLUBS[top[k].cl] ? esc(KF.CLUBS[top[k].cl].name) + ' · ' : '') + top[k].pts + ' pts</small></div><div class="bar">' + (k + 1) + '</div></div>').join('') + '</div><div class="row"><button class="btn big" data-act="pdone">CONTINUAR ▶</button></div></div>';
+    confetti(80, ['#ffd23a', '#fff', '#ff5a6a', '#6fc4ff']); au.anthem && top[0] && top[0].cl && KF.ANTHEMS[top[0].cl] && au.anthem(top[0].cl, .9);
+    const sk = scr.querySelector('.psk'); if (sk) sk.remove();
+  };
+  podium.finish = () => { podiumStop(); finalView(); }; podium.done = () => { podiumStop(); done(); };
+  /* roteiro */
+  pst.innerHTML = '<div class="pintro">E O PÓDIO É...</div>'; au.sfx('gong'); rayA = .35; rayCol = '#ff5a2a';
+  let t = 1900;
+  if (top[2]) { at(t, () => { pst.innerHTML = card(2); rayCol = MED[2][2]; rayA = .5; au.sfx('deflect'); au.sfx('hit'); sparkleAt(W / 2, H * .5, '#e08a4a'); confetti(14, ['#e08a4a', '#fff']); }); t += 2500; }
+  if (top[1]) { at(t, () => { pst.innerHTML = card(1); rayCol = MED[1][2]; rayA = .65; flash = .5; boom = 1; au.sfx('gong'); au.sfx('heavy'); sparkleAt(W * .35, H * .45, '#d5dcec'); sparkleAt(W * .65, H * .45, '#fff'); confetti(30, ['#d5dcec', '#fff', '#8fb4ff']); }); t += 2700; }
+  at(t, () => { pst.innerHTML = '<div class="pintro big">E O CAMPEÃO É...</div>'; spot = 1; rayA = 0; au.stopAnthem && au.stopAnthem(.3); for (let k = 0; k < 10; k++) at(0 + k * 90, () => au.sfx('punch')); });
+  at(t + 1700, () => { for (let k = 0; k < 14; k++) podTm.push(setTimeout(() => au.sfx('punch'), k * 70)); });
+  at(t + 2800, () => {
+    pst.innerHTML = '<div class="crown">👑</div>' + card(0); rayCol = '#ffd23a'; rayA = 1; spot = 0; flash = 1; boom = 1.6;
+    au.sfx('roar'); au.sfx('gong'); au.sfx('special'); if (top[0].cl && KF.ANTHEMS[top[0].cl]) au.anthem(top[0].cl, .9);
+    confetti(160, ['#ffd23a', '#fff3a0', '#ff5a6a', '#6fc4ff', '#7dff8a']);
+    for (let k = 0; k < 7; k++) at(k * 330, () => fw(W * (.15 + Math.random() * .7), H * (.15 + Math.random() * .4), ['#ffd23a', '#fff', '#ff6a5a', '#6fc4ff'], 54));
+  });
+  at(t + 8800, finalView);
+}
 N.onend = m => {
   UI.mode = 'title'; hideGame(); resultPending = true; au.music('title');
   const rows = (m.players || []).slice().sort((a, b) => b.pts - a.pts).map((p, i) => '<div class="brow"><b>' + (i + 1) + '</b><span>' + esc(p.name) + '</span><em>' + p.pts + '</em></div>').join('');
-  show('<div class="card"><h2>' + (m.pv ? '🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') : m.win ? '🏆 PAZ NA ILHA!' : 'FIM DA LUTA') + '</h2><p>' + (m.pv ? (m.rounds > 1 ? 'Campeão depois de ' + m.rounds + ' rounds!' : 'Fim da briga em grupo!') : m.win ? KF.TEXT.endWin : KF.TEXT.endLose) + '</p>' +
+  const html = '<div class="card"><h2>' + (m.pv ? '🏆 ' + (m.winner ? esc(m.winner.toUpperCase()) + ' VENCEU!' : 'EMPATE!') : m.win ? '🏆 PAZ NA ILHA!' : 'FIM DA LUTA') + '</h2><p>' + (m.pv ? (m.rounds > 1 ? 'Campeão depois de ' + m.rounds + ' rounds!' : 'Fim da briga em grupo!') : m.win ? KF.TEXT.endWin : KF.TEXT.endLose) + '</p>' +
     (m.rank ? '<h3>CLASSIFICAÇÃO FINAL</h3>' + rankHtml(m.rank) : '<div class="stats"><div class="stat"><b>' + m.score + '</b><span>pontos da sala</span></div><div class="stat"><b>' + m.kos + '</b><span>KOs</span></div></div><div class="board">' + rows + '</div>') +
-    '<div class="row"><button class="btn big" data-act="oback">VOLTAR PARA A SALA</button></div></div>', 'solid');
+    '<div class="row"><button class="btn big" data-act="oback">VOLTAR PARA A SALA</button></div></div>';
+  const list = m.rank ? m.rank.map(p => ({name: p.name, cl: p.cl, w: p.w, pts: p.pts})) : (m.players || []).slice().sort((a, b) => b.pts - a.pts).map(p => ({name: p.name, cl: p.cl, pts: p.pts}));
+  if (list.length >= 2) podium(list, () => { show(html, 'solid'); }); else show(html, 'solid');
 };
 N.onclose = () => {
   if (!UI.modal || UI.mode === 'online') { UI.mode = 'title'; hideGame(); }
@@ -298,6 +371,8 @@ const ACTIONS = {
   lmode(el){ N.send({t: 'mode', m: el.dataset.m}); },
   lstart(){ N.send({t: 'start', si: lobbySi}); },
   oleave(){ N.send({t: 'leave'}); N.room = null; UI.mode = 'title'; resultPending = false; onlineMenu(); },
+  pskip(){ if (podium.finish) podium.finish(); },
+  pdone(){ if (podium.done) podium.done(); },
   oback(){ resultPending = false; if (N.room) lobbyScreen(N.room); else onlineMenu(); }
 };
 scr.addEventListener('click', e => {

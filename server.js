@@ -95,11 +95,11 @@ function leave(c){
 
 function beginStage(r, si, carry){
   r.phase = 'play'; r.si = si; r.tick = 0; r.known = new Set();
-  r.sim.VW = 440; r.hold = 3.5;
+  r.sim.VW = 440; r.intro = !carry && (r.round || 1) === 1; r.hold = r.intro ? 10.5 : 3.5;
   r.sim.start(si, r.club, r.rival, {mp: true, carry, pvp: r.mode === 'coop' ? null : r.mode, players: [...r.players.values()].map(c => ({pid: c.pid, name: c.name, sc: c.sc, lk: c.lk, club: c.club}))});
   r.rep = {}; r.reported = carry ? carry.score : 0;
   const pv = r.mode !== 'coop';
-  toRoom(r, {t: 'begin', si, pv: pv ? r.mode : 0, club: r.club, rival: r.rival, story: pv
+  toRoom(r, {t: 'begin', si, intro: r.intro ? 10 : 0, pv: pv ? r.mode : 0, club: r.club, rival: r.rival, story: pv
     ? {name: r.mode === 'teams' ? 'Time × Time' : 'Todos contra todos', intro: r.mode === 'teams' ? 'Cada clube forma um time. Derrube os outros times! Quem sobrar vence.' : 'Cada um por si! O último lutador em pé vence.', tip: 'Round ' + r.round + ' de ' + r.rounds + '. Cada nocaute vale 300 pontos. Pegue os pastéis para recuperar vida.'}
     : {name: KF.STAGES[si].name, intro: KF.STAGES[si].intro, tip: KF.STAGES[si].tip}});
 }
