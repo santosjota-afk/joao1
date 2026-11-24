@@ -301,3 +301,15 @@ button.cname{border-color:var(--gold)}
 .startrow{position:sticky;bottom:-8px;background:linear-gradient(transparent,#120809 30%);padding:8px 0 4px;z-index:3}
 
 .stages.rnd{align-items:center;gap:6px;margin:4px 0}.stages.rnd .lbl{font:900 11px var(--disp);letter-spacing:2px;color:#ffd23a;margin-right:4px}.stages.rnd .btn.sm{min-width:38px;padding:4px 10px;min-height:30px}
+
+/* ===== modo PC: dicas de teclas ===== */
+#keybar{position:absolute;right:max(12px,var(--sa-r));bottom:max(10px,var(--sa-b));display:none;gap:8px;z-index:6;pointer-events:none}
+body.pc #keybar:not(.hidden){display:flex}
+body.pc #touch{display:none}
+.kk{min-width:72px;padding:6px 8px 5px;border-radius:12px;background:rgba(14,6,8,.72);border:2px solid rgba(255,255,255,.35);text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px;transition:transform .08s,filter .08s}
+.kk i{font:900 22px/1 var(--disp);font-style:normal;min-width:34px;padding:3px 6px;border-radius:7px;background:linear-gradient(#fff3c8,#e6b84a);color:#3a1208;box-shadow:0 3px 0 #8a5a14}
+.kk i.mouse{font-size:20px;background:linear-gradient(#ffd0c8,#e0584a);box-shadow:0 3px 0 #7a1c14;color:#fff}
+.kk b{font:900 12px/1.1 var(--disp);letter-spacing:.5px;margin-top:3px;color:#ffe9a8;text-shadow:0 1px 1px #000}
+.kk small{font:700 9px/1 var(--disp);opacity:.7;letter-spacing:.5px}
+.kk.on{transform:scale(.92) translateY(2px);filter:brightness(1.4);border-color:#ffd24a}
+.kk.rdy{border-color:#ffd24a;box-shadow:0 0 14px #ffb830}

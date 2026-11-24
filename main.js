@@ -28,7 +28,7 @@ const scr = $('screen');
 function show(html, cls){ scr.innerHTML = html; scr.className = cls || ''; UI.modal = true; }
 function hide(){ scr.className = 'hidden'; scr.innerHTML = ''; UI.modal = false; }
 const sndLabel = () => au.muted ? '🔇 SOM: DESLIGADO' : '🔊 SOM: LIGADO';
-const hideGame = () => { $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); };
+const hideGame = () => { $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); $('keybar').classList.add('hidden'); };
 function swatch(id){
   const k = KF.CLUBS[id], a = k.a, b = k.b, c = k.c;
   switch (k.pat) {
@@ -145,8 +145,8 @@ function storyScreen(si, carry){
     '<div class="row"><button class="btn big" data-act="fight">⚔ LUTAR!</button></div></div>', 'solid');
 }
 function showGameUI(online){
-  hide(); $('hud').classList.remove('hidden'); $('touch').classList.remove('hidden'); $('bPause').textContent = online ? '✕' : '❚❚';
-  { const S = schoolOf(save.school); $('tbD').innerHTML = '<span>' + S.spMark + '</span><small>' + S.sp + '</small>'; $('hKiBar').querySelector('b').textContent = 'KI · ' + S.sp; }
+  hide(); $('hud').classList.remove('hidden'); $('touch').classList.remove('hidden'); $('keybar').classList.remove('hidden'); $('bPause').textContent = online ? '✕' : '❚❚';
+  { const S = schoolOf(save.school); $('tbD').innerHTML = '<span>' + S.spMark + '</span><small>' + S.sp + '</small>'; $('hKiBar').querySelector('b').textContent = 'KI · ' + S.sp; $('kkQn').textContent = S.sp; }
   $('hName').textContent = KF.CLUBS[club].name.toUpperCase(); lastHud = {}; V.clearFx(); In.clear();
   try {
     if (navigator.maxTouchPoints > 0 && !document.fullscreenElement && document.documentElement.requestFullscreen) {
@@ -413,7 +413,7 @@ function hud(S, pl, score){
   const me = pl.find(p => p.pid === S.me) || pl[0]; if (!me) return;
   const hp = Math.round(me.hp / me.max * 100);
   if (lastHud.hp !== hp) { lastHud.hp = hp; $('hHp').style.width = hp + '%'; }
-  if (lastHud.ki !== me.ki) { lastHud.ki = me.ki; $('hKi').style.width = me.ki + '%'; $('hKiBar').classList.toggle('ready', me.ki >= 50); }
+  if (lastHud.ki !== me.ki) { lastHud.ki = me.ki; $('hKi').style.width = me.ki + '%'; $('hKiBar').classList.toggle('ready', me.ki >= 50); $('kkQ').classList.toggle('rdy', me.ki >= 50); }
   setT('hScore', String(score)); setT('hLives', me.out ? 'FORA' : '♥'.repeat(Math.max(0, me.lives)));
   const cb = me.combo >= 2 ? 'COMBO x' + me.combo : '';
   if (lastHud.cb !== cb) { lastHud.cb = cb; const c = $('hCombo'); c.textContent = cb; if (cb) { c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop'); } }

@@ -14,7 +14,7 @@ In.buzz = function(ms){ if (In.vibrate && navigator.vibrate) { try { navigator.v
 /* ---------- teclado ---------- */
 const keys = {};
 const MAP = {ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R', ArrowUp: 'U', KeyW: 'U', ArrowDown: 'D', KeyS: 'D'};
-const ACT = {KeyJ: 'punch', KeyZ: 'punch', KeyK: 'kick', KeyX: 'kick', KeyL: 'jump', KeyC: 'jump', Space: 'jump', KeyU: 'special', KeyV: 'special'};
+const ACT = {KeyJ: 'punch', KeyZ: 'punch', KeyK: 'kick', KeyR: 'kick', KeyX: 'jump', Space: 'jump', KeyQ: 'special', KeyU: 'special', KeyV: 'special'};
 function kbAxis(){ In.kx = (keys.R ? 1 : 0) - (keys.L ? 1 : 0); In.ky = (keys.D ? 1 : 0) - (keys.U ? 1 : 0); }
 addEventListener('keydown', e => {
   if (MAP[e.code]) { keys[MAP[e.code]] = true; kbAxis(); e.preventDefault(); }
@@ -26,6 +26,26 @@ addEventListener('keyup', e => {
   else if (ACT[e.code]) In.release(ACT[e.code]);
 });
 In.kx = In.ky = 0;
+
+/* ---------- modo PC: clique esquerdo = atacar; teclas Q/R/X = habilidades ---------- */
+const mq = window.matchMedia ? matchMedia('(hover:hover) and (pointer:fine)') : null;
+const setPc = on => document.body.classList.toggle('pc', !!on);
+In.pc = () => document.body.classList.contains('pc');
+function initPc(){
+  setPc(mq && mq.matches);
+  document.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') setPc(false); else if (e.pointerType === 'mouse') setPc(true); }, true);
+  const kb = document.getElementById('keybar');
+  const gameOn = () => { const h = document.getElementById('hud'), sc = document.getElementById('screen'); return h && !h.classList.contains('hidden') && sc && sc.classList.contains('hidden'); };
+  let mouseDown = false;
+  document.addEventListener('mousedown', e => {
+    if (e.button !== 0 || !In.pc() || !gameOn() || e.target.closest('button,.scroll,#screen')) return;
+    mouseDown = true; In.press('punch'); e.preventDefault();
+  });
+  addEventListener('mouseup', e => { if (e.button === 0 && mouseDown) { mouseDown = false; In.release('punch'); } });
+  /* realça a tecla pressionada */
+  setInterval(() => { if (!kb) return; kb.querySelectorAll('[data-a]').forEach(el => el.classList.toggle('on', !!In.down[el.dataset.a])); }, 60);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPc); else initPc();
 In.axis = function(){
   const x = In.x || In.kx, y = In.y || In.ky;
   return {x: x, y: y};
