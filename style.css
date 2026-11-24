@@ -299,3 +299,5 @@ button.cname{border-color:var(--gold)}
 #hWp{display:none;position:absolute;left:max(12px,var(--sa-l));top:calc(var(--sa-t,0px) + 62px);padding:3px 10px;border-radius:10px;background:rgba(0,0,0,.6);border:2px solid #ffd23a;font:900 11px var(--disp);color:#ffd23a;text-shadow:0 1px 0 #000;animation:kiPulse .7s infinite alternate}
 
 .startrow{position:sticky;bottom:-8px;background:linear-gradient(transparent,#120809 30%);padding:8px 0 4px;z-index:3}
+
+.stages.rnd{align-items:center;gap:6px;margin:4px 0}.stages.rnd .lbl{font:900 11px var(--disp);letter-spacing:2px;color:#ffd23a;margin-right:4px}.stages.rnd .btn.sm{min-width:38px;padding:4px 10px;min-height:30px}

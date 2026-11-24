@@ -76,7 +76,7 @@ N.state = function(){
   for (const id in N.objs) if (!seen[id]) delete N.objs[id];
   const s = b.s;
   return {ents, proj: s.pr.map(p => ({type: p.t, x: p.x, y: p.y, z: p.z, spin: p.sp, side: p.s ? 'good' : 'bad', deflected: !!p.df})), items: s.it,
-    cam: lerp(a.s.cam, s.cam, al), t: performance.now() / 1000, theme: s.pv ? 'dojo' : KF.STAGES[s.si].theme, cA: s.club, cB: s.rival, me: N.me, online: true, pl: s.pl, sc: s.sc, kos: s.kos, si: s.si, pv: s.pv, win: s.win, wi: s.wi, st: s.st};
+    cam: lerp(a.s.cam, s.cam, al), t: performance.now() / 1000, theme: s.pv ? 'dojo' : KF.STAGES[s.si].theme, cA: s.club, cB: s.rival, pv: s.pv, me: N.me, online: true, pl: s.pl, sc: s.sc, kos: s.kos, si: s.si, pv: s.pv, win: s.win, wi: s.wi, st: s.st};
 };
 
 /* predição local do próprio jogador: o movimento aparece na hora (o servidor confirma depois) */

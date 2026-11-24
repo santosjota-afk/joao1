@@ -221,7 +221,7 @@ function lobbyScreen(m){
   const md = MODES.find(x => x[0] === (m.mode || 'ffa')) || MODES[1];
   const modeRow = host ? '<div class="stages">' + MODES.map(x => '<button class="btn sm' + (x[0] === md[0] ? '' : ' alt') + '" data-act="lmode" data-m="' + x[0] + '">' + x[1] + '</button>').join('') + '</div><p class="hint" style="animation:none">' + md[2] + '</p>'
     : '<p class="hint" style="animation:none">Modo: <b>' + md[1] + '</b> — ' + md[2] + '</p>';
-  const roundRow = (host ? '<p class="hint" style="animation:none;margin:6px 0 2px">Quantos rounds?</p><div class="stages">' + RN.map(n => '<button class="btn sm' + (n === rn ? '' : ' alt') + '" data-act="lrounds" data-n="' + n + '">' + n + '</button>').join('') + '</div>' : '<p class="hint" style="animation:none">Rounds: <b>' + rn + '</b></p>');
+  const roundRow = '<div class="stages rnd"><span class="lbl">ROUNDS</span>' + (host ? RN.map(n => '<button class="btn sm' + (n === rn ? '' : ' alt') + '" data-act="lrounds" data-n="' + n + '">' + n + '</button>').join('') : '<b>' + rn + '</b>') + '</div>';
   sb = '';
   club = m.club; rival = m.rival;
   show('<div class="card wide"><h3>CÓDIGO DA SALA</h3><div class="roomcode">' + esc(m.code) + '</div>' +

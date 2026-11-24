@@ -329,55 +329,68 @@ function makeStage(theme, ca, cb){
 
     const CA = KF.CLUBS[ca] || KF.CLUBS.fig, CB = KF.CLUBS[cb] || KF.CLUBS.ava;
     const flagCol = c => (c.a === '#f5f5f5' || c.a === '#ffffff') ? c.b : c.a;
-    S.bann = layer(960, 100, rs, (g, w, h) => {
-      for (let i = 0; i < 12; i++) {
-        const x = 20 + i * 80, fig = i % 2 === 0; g.fillStyle = '#e8d8b0'; g.fillRect(x - 3, 0, 36, 3);
-        g.beginPath(); g.moveTo(x, 3); g.lineTo(x + 30, 3); g.lineTo(x + 30, 70); g.lineTo(x + 15, 80); g.lineTo(x, 70); g.closePath(); g.save(); g.clip();
-        const cc = fig ? CA : CB; g.fillStyle = cc.a; g.fillRect(x, 0, 30, 90); g.fillStyle = cc.b === cc.a ? '#fff' : cc.b; for (let s = 0; s < 30; s += 10) g.fillRect(x + s + 5, 0, 5, 90); g.restore();
-        g.fillStyle = '#f2c200'; g.beginPath(); g.arc(x + 15, 34, 5, 0, TAU); g.fill();
+    const dk = c => { let h = String(c).replace('#', ''); if (h.length === 3) h = h.split('').map(x => x + x).join(''); const n = parseInt(h, 16) || 0; return ((n >> 16) + (n >> 8 & 255) + (n & 255)) / 3 < 60; };
+    /* camisa de clube desenhada (para pendurar no fundo da arquibancada ou torcedor levantar) */
+    const drawShirt = (g, cl, cx, top, k, num) => {
+      g.save(); g.translate(cx, top); g.scale(k, k); const id = c => c;
+      g.beginPath(); g.moveTo(-7, 0); g.lineTo(-10.2, 2.6); g.lineTo(-9.6, 7); g.lineTo(-7, 5.8); g.lineTo(-7.2, 19); g.lineTo(7.2, 19); g.lineTo(7, 5.8); g.lineTo(9.6, 7); g.lineTo(10.2, 2.6); g.lineTo(7, 0); g.quadraticCurveTo(0, 4.2, -7, 0); g.closePath();
+      g.fillStyle = cl.a; g.fill(); g.save(); g.clip(); jerseyPattern(g, cl, id, 0, 0, 7, 0, 19, 1);
+      g.fillStyle = cl.b === cl.a ? '#fff' : cl.b; g.fillRect(-11, 5.2, 4.4, 1.3); g.fillRect(6.6, 5.2, 4.4, 1.3); g.restore();
+      if (k > 1.6) { g.fillStyle = '#6a4a2a'; g.fillRect(-9, -2.2, 18, 1.6); }
+      g.lineJoin = 'round'; g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = .7 / Math.max(.8, k * .5); g.stroke();
+      g.fillStyle = dk(cl.a) ? '#f3f3f3' : '#161616'; g.beginPath(); g.moveTo(-3.2, -.2); g.lineTo(0, 3.8); g.lineTo(3.2, -.2); g.quadraticCurveTo(0, 2.2, -3.2, -.2); g.fill();
+      if (k > 1.6) {
+        g.fillStyle = '#f2c200'; g.beginPath(); g.arc(-3.6, 5.6, 1.5, 0, TAU); g.fill(); g.strokeStyle = 'rgba(0,0,0,.4)'; g.lineWidth = .3; g.stroke();
+        g.fillStyle = dk(cl.a) ? '#f3f3f3' : '#161616'; g.font = '900 6px "Arial Black",Impact,sans-serif'; g.textAlign = 'center'; g.fillText(num || '10', 0, 15.6);
+        g.fillStyle = 'rgba(255,255,255,.2)'; g.fillRect(-5.2, 8, 10.4, 2);
+      }
+      g.restore();
+    };
+    S.bann = layer(960, 112, rs, (g, w, h) => {
+      const bm = g.createLinearGradient(0, 0, 0, 8); bm.addColorStop(0, '#4a2a18'); bm.addColorStop(1, '#2a160c'); g.fillStyle = bm; g.fillRect(0, 0, w, 8); g.fillStyle = '#b2262c'; g.fillRect(0, 7, w, 2); g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(0, 0, w, 1.4);
+      const nums = ['10', '9', '7', '11', '5', '8'];
+      for (let i = 0; i < 6; i++) {
+        const cx = 80 + i * 160, cl = i % 2 ? CB : CA;
+        g.strokeStyle = '#d8c8a0'; g.lineWidth = 1; g.beginPath(); g.moveTo(cx - 14, 9); g.lineTo(cx - 9 * 2.9 * .5 - 1, 24 - 2.2 * 2.9 + 2.2); g.moveTo(cx + 14, 9); g.lineTo(cx + 9 * 2.9 * .5 + 1, 24 - 2.2 * 2.9 + 2.2); g.stroke();
+        drawShirt(g, cl, cx, 24, 2.9, nums[i]);
+        /* flâmulas entre as camisas */
+        const px = cx + 80; for (let q = -1; q <= 1; q++) { const x = px + q * 20, pc = (q + i) % 2 ? CB : CA; g.fillStyle = '#d8c8a0'; g.fillRect(x - 6, 9, 12, 1.5); g.fillStyle = pc.a; g.beginPath(); g.moveTo(x - 6, 10.5); g.lineTo(x + 6, 10.5); g.lineTo(x, 36 - Math.abs(q) * 6); g.closePath(); g.fill(); g.fillStyle = pc.b === pc.a ? '#fff' : pc.b; g.beginPath(); g.moveTo(x - 2.4, 10.5); g.lineTo(x + 2.4, 10.5); g.lineTo(x, 24 - Math.abs(q) * 4); g.closePath(); g.fill(); }
       }
     });
-    const dk = c => { const n = parseInt(c.slice(1), 16); return ((n >> 16) + (n >> 8 & 255) + (n & 255)) / 3 < 60; };
     const mkCrowd = ph => layer(800, 104, rs, (g, w, h) => {
       const r = mulberry(5), TAU2 = Math.PI * 2, wave = (x, k) => Math.sin(ph * Math.PI / 2 + x * .045 + k);
-      if (theme === 'dojo') { const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#120a0c'); bg.addColorStop(1, '#2a1a16'); g.fillStyle = bg; g.fillRect(0, 0, w, h); }
-      const rows = [{y: 44, s: .66}, {y: 58, s: .76}, {y: 72, s: .86}, {y: 86, s: .96}, {y: 99, s: 1.06}];
+      if (theme === 'dojo') { const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, '#0e0709'); bg.addColorStop(1, '#2a1a16'); g.fillStyle = bg; g.fillRect(0, 0, w, h); }
+      const rows = [{y: 42, s: .68}, {y: 56, s: .78}, {y: 70, s: .88}, {y: 84, s: .98}, {y: 97, s: 1.08}];
+      const secOf = x => (Math.floor(x / 200) % 2) ? CB : CA;
       rows.forEach((rw, ri) => {
-        /* degrau de concreto + assentos nas cores dos clubes */
-        g.fillStyle = theme === 'dojo' ? '#33261f' : 'rgba(30,20,18,.75)'; g.fillRect(0, rw.y - 1, w, 12); g.fillStyle = 'rgba(255,255,255,.07)'; g.fillRect(0, rw.y - 1, w, 1.6);
-        for (let x = 4; x < w; x += 13) { g.fillStyle = ((x / 13 | 0) + ri) % 2 ? CA.a : CB.a; g.globalAlpha = .55; g.fillRect(x, rw.y + 6, 9, 3); g.globalAlpha = 1; }
-        for (let x = 5; x < w; x += 12.5 * rw.s) {
-          const s = rw.s, cl = r() < .5 ? CA : CB, other = cl === CA ? CB : CA, pa = cl.a, pb = cl.b === cl.a ? '#fff' : cl.b, kind = r(), hairI = Math.floor(r() * 4), skin = KF.SKINS[Math.floor(r() * 5)];
-          const jb = wave(x, ri) * (kind < .25 ? 3.2 : 1.6), by = rw.y + 3 + jb;
-          /* corpo / camisa */
-          g.fillStyle = pa; g.fillRect(x - 5 * s, by - 13 * s, 10 * s, 14 * s); g.fillStyle = pb;
-          if (cl.pat === 'stripes') for (let k = -1; k <= 1; k++) g.fillRect(x + k * 3.4 * s - 1 * s, by - 13 * s, 2 * s, 14 * s); else g.fillRect(x - 1.5 * s, by - 13 * s, 3 * s, 14 * s);
-          /* cabeça + cabelo */
-          const hy = by - 18 * s; g.fillStyle = skin; g.beginPath(); g.arc(x, hy, 4.6 * s, 0, TAU2); g.fill();
-          g.fillStyle = ['#1a1208', '#3a2412', '#d8b04a', '#111'][hairI]; g.beginPath(); g.arc(x, hy - 1.2 * s, 4.7 * s, Math.PI, TAU2); g.fill();
-          if (kind < .22) {            // braços para cima comemorando
-            const up = wave(x, 2) * 3; line(g, x - 4 * s, by - 10 * s, x - 7 * s, by - 26 * s + up, 2 * s + .6, skin); line(g, x + 4 * s, by - 10 * s, x + 7 * s, by - 26 * s - up, 2 * s + .6, skin);
-          } else if (kind < .38) {     // cachecol esticado
-            const sy = by - 25 * s + wave(x, 1) * 2.4, sw = 24 * s; line(g, x - 5 * s, by - 10 * s, x - sw / 2, sy + 2 * s, 1.6 * s + .4, skin); line(g, x + 5 * s, by - 10 * s, x + sw / 2, sy + 2 * s, 1.6 * s + .4, skin);
-            for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? other.a : cl.a; g.fillRect(x - sw / 2 + k * sw / 6, sy + wave(x + k * 9, 3) * 1.2, sw / 6 + .4, 4.2 * s); }
-          } else if (kind < .48) {     // bandeira ondulando
-            const up = wave(x, 4) * 3, px = x + 7 * s, top = by - 36 * s + up; line(g, x + 4 * s, by - 10 * s, px, top + 3, 1.3, '#e8e0d0');
-            g.fillStyle = flagCol(r() < .5 ? CA : CB); g.beginPath(); g.moveTo(px, top); for (let k = 0; k <= 5; k++) g.lineTo(px + k * 3.4 * s, top + wave(x + k * 8, 5) * 1.8); for (let k = 5; k >= 0; k--) g.lineTo(px + k * 3.4 * s, top + 9 * s + wave(x + k * 8, 5) * 1.8); g.closePath(); g.fill();
-            g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(px + 2 * s, top + 3.4 * s, 12 * s, 1.8 * s);
-          } else if (kind < .52 && ri >= 3) {   // bumbo
-            g.fillStyle = '#7a2a1a'; g.beginPath(); g.ellipse(x, by - 4 * s, 8 * s, 6 * s, 0, 0, TAU2); g.fill(); g.strokeStyle = '#e8d8b0'; g.lineWidth = 1.2; g.stroke(); g.fillStyle = '#f3e6c8'; g.beginPath(); g.ellipse(x, by - 4 * s, 6 * s, 4.4 * s, 0, 0, TAU2); g.fill();
-            line(g, x + 5 * s, by - 10 * s, x + 2 * s, by - 6 * s - Math.abs(wave(x, 6)) * 7, 1.6, skin);
-          } else {                     // uma mão levantada / palmas
-            const up = wave(x, 7) * 2; line(g, x + 4.4 * s, by - 10 * s, x + 6 * s, by - 20 * s + up, 1.8 * s + .4, skin);
-          }
-          if (r() < .06) { g.fillStyle = '#fff'; g.fillRect(x - 3 * s, hy - 6.6 * s, 6 * s, 1.6 * s); g.fillStyle = pa; g.fillRect(x - 3 * s, hy - 5.2 * s, 6 * s, 1.1 * s); }
+        g.fillStyle = theme === 'dojo' ? '#3a2b23' : 'rgba(34,24,20,.82)'; g.fillRect(0, rw.y - 1, w, 12); g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(0, rw.y - 1, w, 1.6); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, rw.y + 10, w, 1.4);
+        for (let x = 3; x < w; x += 12) { const sc = secOf(x); g.fillStyle = sc.a; g.globalAlpha = .6; g.fillRect(x, rw.y + 5.6, 9, 3.4); g.globalAlpha = 1; }
+        for (let x = 6; x < w; x += 12.8 * rw.s) {
+          if (x % 200 < 7 || x % 200 > 193) continue;                    // corredor/escada entre os setores
+          const s = rw.s, sec = secOf(x), cl = r() < .1 ? (sec === CA ? CB : CA) : sec, other = cl === CA ? CB : CA, pa = cl.a, pb = cl.b === cl.a ? '#fff' : cl.b, kind = r(), hairI = Math.floor(r() * 4), skin = KF.SKINS[Math.floor(r() * 5)], jx = x + (r() - .5) * 2.4;
+          const jb = wave(jx, ri) * (kind < .24 ? 3.2 : 1.5), by = rw.y + 3 + jb;
+          /* camisa do torcedor: mangas, gola, escudo, listras */
+          g.fillStyle = pa; g.fillRect(jx - 5 * s, by - 13 * s, 10 * s, 14 * s); g.fillRect(jx - 7.4 * s, by - 12.4 * s, 3 * s, 5 * s); g.fillRect(jx + 4.4 * s, by - 12.4 * s, 3 * s, 5 * s);
+          g.fillStyle = pb; if (cl.pat === 'stripes') for (let k = -1; k <= 1; k++) g.fillRect(jx + k * 3.4 * s - 1 * s, by - 13 * s, 2 * s, 14 * s); else if (cl.pat === 'hoops') { for (let k = 0; k < 3; k++) g.fillRect(jx - 5 * s, by - 11 * s + k * 5 * s, 10 * s, 2 * s); } else g.fillRect(jx - 1.5 * s, by - 13 * s, 3 * s, 14 * s);
+          g.fillRect(jx - 7.4 * s, by - 8.4 * s, 3 * s, 1.1 * s); g.fillRect(jx + 4.4 * s, by - 8.4 * s, 3 * s, 1.1 * s);
+          g.fillStyle = skin; g.beginPath(); g.moveTo(jx - 2.2 * s, by - 13 * s); g.lineTo(jx + 2.2 * s, by - 13 * s); g.lineTo(jx, by - 10.2 * s); g.closePath(); g.fill();
+          g.fillStyle = '#f2c200'; g.beginPath(); g.arc(jx + 2.8 * s, by - 8.6 * s, 1.15 * s, 0, TAU2); g.fill();
+          const hy = by - 18 * s; g.fillStyle = skin; g.beginPath(); g.arc(jx, hy, 4.6 * s, 0, TAU2); g.fill();
+          g.fillStyle = ['#1a1208', '#3a2412', '#d8b04a', '#111'][hairI]; g.beginPath(); g.arc(jx, hy - 1.2 * s, 4.7 * s, Math.PI, TAU2); g.fill();
+          if (ri >= 2) { g.fillStyle = '#111'; g.fillRect(jx - 2.4 * s, hy - .4 * s, 1 * s, 1 * s); g.fillRect(jx + 1.4 * s, hy - .4 * s, 1 * s, 1 * s); }
+          if (kind < .2) { const up = wave(jx, 2) * 3; line(g, jx - 5.4 * s, by - 10 * s, jx - 7.6 * s, by - 26 * s + up, 2 * s + .6, skin); line(g, jx + 5.4 * s, by - 10 * s, jx + 7.6 * s, by - 26 * s - up, 2 * s + .6, skin); }
+          else if (kind < .33) { const sy = by - 26 * s + wave(jx, 1) * 2.4, sw = 26 * s; line(g, jx - 5 * s, by - 10 * s, jx - sw / 2, sy + 2 * s, 1.6 * s + .4, skin); line(g, jx + 5 * s, by - 10 * s, jx + sw / 2, sy + 2 * s, 1.6 * s + .4, skin); for (let k = 0; k < 6; k++) { g.fillStyle = k % 2 ? other.a : cl.a; g.fillRect(jx - sw / 2 + k * sw / 6, sy + wave(jx + k * 9, 3) * 1.2, sw / 6 + .4, 4.4 * s); } g.fillStyle = '#fff'; g.fillRect(jx - sw / 2, sy + 1.4 * s, sw, .8); }
+          else if (kind < .42) { const up = wave(jx, 4) * 3, px = jx + 7 * s, top = by - 38 * s + up; line(g, jx + 4 * s, by - 10 * s, px, top + 3, 1.3, '#e8e0d0'); g.fillStyle = flagCol(cl); g.beginPath(); g.moveTo(px, top); for (let k = 0; k <= 5; k++) g.lineTo(px + k * 3.4 * s, top + wave(jx + k * 8, 5) * 1.8); for (let k = 5; k >= 0; k--) g.lineTo(px + k * 3.4 * s, top + 9 * s + wave(jx + k * 8, 5) * 1.8); g.closePath(); g.fill(); g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(px + 2 * s, top + 3.4 * s, 12 * s, 1.8 * s); }
+          else if (kind < .52) { const up = wave(jx, 6) * 2.6; line(g, jx - 4.4 * s, by - 10 * s, jx - 3 * s, by - 24 * s + up, 1.6 * s + .4, skin); line(g, jx + 4.4 * s, by - 10 * s, jx + 3 * s, by - 24 * s + up, 1.6 * s + .4, skin); drawShirt(g, cl, jx, by - 44 * s + up, .9 * s + .1); }
+          else if (kind < .55 && ri >= 3) { g.fillStyle = '#7a2a1a'; g.beginPath(); g.ellipse(jx, by - 4 * s, 8 * s, 6 * s, 0, 0, TAU2); g.fill(); g.strokeStyle = '#e8d8b0'; g.lineWidth = 1.2; g.stroke(); g.fillStyle = '#f3e6c8'; g.beginPath(); g.ellipse(jx, by - 4 * s, 6 * s, 4.4 * s, 0, 0, TAU2); g.fill(); line(g, jx + 5 * s, by - 10 * s, jx + 2 * s, by - 6 * s - Math.abs(wave(jx, 6)) * 7, 1.6, skin); }
+          else { const up = wave(jx, 7) * 2; line(g, jx + 4.8 * s, by - 10 * s, jx + 6.4 * s, by - 20 * s + up, 1.8 * s + .4, skin); }
         }
       });
-      /* grade de proteção + placas de LED com o nome da turma */
+      /* placas de LED + grade de proteção */
       g.strokeStyle = 'rgba(200,200,215,.55)'; g.lineWidth = .9; for (let x = 0; x < w; x += 8) { g.beginPath(); g.moveTo(x, h - 20); g.lineTo(x, h - 11); g.stroke(); } g.beginPath(); g.moveTo(0, h - 20); g.lineTo(w, h - 20); g.stroke();
       g.fillStyle = '#0a0a12'; g.fillRect(0, h - 11, w, 11);
       const txt = ['KUNG FU DA ILHA', CA.name.toUpperCase(), 'PAZ NA ILHA', CB.name.toUpperCase()]; g.font = '900 7px "Arial Black",Impact,sans-serif'; g.textAlign = 'center';
-      for (let k = 0; k < 4; k++) { const bx = k * 200; g.fillStyle = k % 2 ? (dk(CB.a) ? CB.b : CB.a) : (dk(CA.a) ? CA.b : CA.a); g.fillRect(bx + 3, h - 10, 194, 8); g.fillStyle = k % 2 ? (dk(CB.a) ? CB.a : CB.b) : (dk(CA.a) ? CA.a : CA.b); if (g.fillStyle === g.fillStyle) g.fillText(txt[k], bx + 100, h - 3.6); }
+      for (let k = 0; k < 4; k++) { const bx = k * 200, cc = k % 2 ? CB : CA; g.fillStyle = dk(cc.a) ? cc.b : cc.a; g.fillRect(bx + 3, h - 10, 194, 8); g.fillStyle = dk(cc.a) ? cc.a : (cc.b === cc.a ? '#fff' : cc.b); g.fillText(txt[k], bx + 100, h - 3.6); }
     });
     S.crowdF = [0, 1, 2, 3].map(mkCrowd); S.hype = 0;
     const standsFx = (g, cam, VW, t, baseY) => {      // sinalizadores (fumaça colorida), serpentinas e luz dos refletores
@@ -513,7 +526,7 @@ function makeStage(theme, ca, cb){
       tile(g, S.bann, .25, cam, 4, VW);
       tile(g, S.crowdF[Math.floor(t * (3.4 + (S.hype || 0) * 5)) % 4], .5, cam, HZ - 98, VW); standsFx(g, cam, VW, t, HZ - 40);
     }
-    if (th !== 'dojo' && S.stands) { tile(g, S.bann, .25, cam, 2, VW); tile(g, S.crowdF[Math.floor(t * (3.4 + (S.hype || 0) * 5)) % 4], .5, cam, HZ - 84, VW); standsFx(g, cam, VW, t, HZ - 26); }
+    if (th !== 'dojo' && S.stands) { g.save(); g.beginPath(); g.rect(0, HZ - 58, VW, 80); g.clip(); tile(g, S.crowdF[Math.floor(t * (3.4 + (S.hype || 0) * 5)) % 4], .5, cam, HZ - 84, VW); g.restore(); standsFx(g, cam, VW, t, HZ - 26); }
     /* chão */
     tile(g, S.floorT, 1, cam, HZ, VW);
     if (th === 'dojo') {   // marcações de campo no tatame

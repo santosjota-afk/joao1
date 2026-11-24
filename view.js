@@ -141,7 +141,7 @@ V.render = function(g, S, dt){
   g.save();
   if (V.shake > .3) g.translate(rand(-V.shake, V.shake) * .6, rand(-V.shake, V.shake) * .6);
   (V.stage(S.theme, S.cA, S.cB).hype = V.hype || 0, V.stage(S.theme, S.cA, S.cB)).draw(g, cam, VW, T, dt);
-  const L = [];
+  const L = []; let myClub = null; for (const f of S.ents) if (f.pid === me) myClub = f.club;
   for (const f of S.ents) {            // imagens residuais em golpes rápidos
     if (dt > 0 && !f.dead) {
       const ak = f.ak || f.atkKey, fast = (f.st === 'atk' && f.atk && (f.atk.air || f.atk.dashV || f.atk.lunge || ak === 'spin' || ak === 'kick')) || (f.pid > 0 && f.st === 'jump');
@@ -170,7 +170,7 @@ V.render = function(g, S, dt){
       if (f.pid > 0 && !f.dead) {
         if (f.pid === me) { g.fillStyle = '#ffd23a'; g.strokeStyle = '#000'; g.lineWidth = 1.5; const b = Math.sin(T * 6) * 2; g.beginPath(); g.moveTo(sx - 6, top - 10 + b); g.lineTo(sx + 6, top - 10 + b); g.lineTo(sx, top - 2 + b); g.closePath(); g.stroke(); g.fill(); }
         else if (S.online) {
-          g.font = '900 8px "Arial Black",Impact,sans-serif'; g.textAlign = 'center'; g.lineWidth = 2.6; g.lineJoin = 'round'; g.strokeStyle = '#000'; g.fillStyle = '#9fe0ff';
+          g.font = '900 8px "Arial Black",Impact,sans-serif'; g.textAlign = 'center'; g.lineWidth = 2.6; g.lineJoin = 'round'; g.strokeStyle = '#000'; g.fillStyle = S.pv === 2 ? (f.club === myClub ? '#7dff8a' : '#ff8a8a') : S.pv === 1 ? '#ffd9a0' : '#9fe0ff';
           g.strokeText(f.name || 'Jogador', sx, top - 3); g.fillText(f.name || 'Jogador', sx, top - 3);
         }
       }
