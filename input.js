@@ -16,11 +16,14 @@ const keys = {};
 const MAP = {ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R', ArrowUp: 'U', KeyW: 'U', ArrowDown: 'D', KeyS: 'D'};
 const ACT = {KeyJ: 'punch', KeyZ: 'punch', KeyK: 'kick', KeyR: 'kick', KeyX: 'jump', Space: 'jump', KeyQ: 'special', KeyU: 'special', KeyV: 'special'};
 function kbAxis(){ In.kx = (keys.R ? 1 : 0) - (keys.L ? 1 : 0); In.ky = (keys.D ? 1 : 0) - (keys.U ? 1 : 0); }
+const typing = e => { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable); };
 addEventListener('keydown', e => {
+  if (typing(e)) return;
   if (MAP[e.code]) { keys[MAP[e.code]] = true; kbAxis(); e.preventDefault(); }
   else if (ACT[e.code]) { if (!e.repeat) In.press(ACT[e.code]); e.preventDefault(); }
   else if (e.code === 'Escape' || e.code === 'KeyP') { if (!e.repeat && KF.ui) KF.ui.togglePause(); }
 });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; kbAxis(); In.down = {}; });
 addEventListener('keyup', e => {
   if (MAP[e.code]) { keys[MAP[e.code]] = false; kbAxis(); }
   else if (ACT[e.code]) In.release(ACT[e.code]);
